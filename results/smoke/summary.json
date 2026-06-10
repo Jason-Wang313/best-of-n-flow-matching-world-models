@@ -1,0 +1,13 @@
+{
+  "bon_proxy_ood_at_max_n": 306.01007080078125,
+  "bon_proxy_pred_true_gap_at_max_n": 133.0717315673828,
+  "bon_proxy_true_return_at_max_n": -90.4898452758789,
+  "bon_uncertainty_ood_at_max_n": 148.07752990722656,
+  "bon_uncertainty_pred_true_gap_at_max_n": 65.77809143066406,
+  "bon_uncertainty_true_return_at_max_n": -40.16089630126953,
+  "final_train_loss": 0.6768180131912231,
+  "metrics_rows": 15.0,
+  "random_ood_at_max_n": 251.05172729492188,
+  "random_pred_true_gap_at_max_n": 85.11775207519531,
+  "random_true_return_at_max_n": -61.28731918334961
+}
