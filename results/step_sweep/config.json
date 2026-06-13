@@ -1,0 +1,122 @@
+{
+  "configs": {
+    "50": {
+      "batch_size": 96,
+      "candidate_counts": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "device": "cpu",
+      "eval_contexts": 32,
+      "hidden_dim": 72,
+      "horizon": 18,
+      "lr": 0.002,
+      "max_candidates": 16,
+      "ode_steps": 16,
+      "penalty_weight": 0.35,
+      "proxy_noise": 0.08,
+      "seed": 50,
+      "train_size": 256,
+      "train_steps": 80
+    },
+    "51": {
+      "batch_size": 96,
+      "candidate_counts": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "device": "cpu",
+      "eval_contexts": 32,
+      "hidden_dim": 72,
+      "horizon": 18,
+      "lr": 0.002,
+      "max_candidates": 16,
+      "ode_steps": 16,
+      "penalty_weight": 0.35,
+      "proxy_noise": 0.08,
+      "seed": 51,
+      "train_size": 256,
+      "train_steps": 80
+    },
+    "52": {
+      "batch_size": 96,
+      "candidate_counts": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "device": "cpu",
+      "eval_contexts": 32,
+      "hidden_dim": 72,
+      "horizon": 18,
+      "lr": 0.002,
+      "max_candidates": 16,
+      "ode_steps": 16,
+      "penalty_weight": 0.35,
+      "proxy_noise": 0.08,
+      "seed": 52,
+      "train_size": 256,
+      "train_steps": 80
+    },
+    "53": {
+      "batch_size": 96,
+      "candidate_counts": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "device": "cpu",
+      "eval_contexts": 32,
+      "hidden_dim": 72,
+      "horizon": 18,
+      "lr": 0.002,
+      "max_candidates": 16,
+      "ode_steps": 16,
+      "penalty_weight": 0.35,
+      "proxy_noise": 0.08,
+      "seed": 53,
+      "train_size": 256,
+      "train_steps": 80
+    },
+    "54": {
+      "batch_size": 96,
+      "candidate_counts": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "device": "cpu",
+      "eval_contexts": 32,
+      "hidden_dim": 72,
+      "horizon": 18,
+      "lr": 0.002,
+      "max_candidates": 16,
+      "ode_steps": 16,
+      "penalty_weight": 0.35,
+      "proxy_noise": 0.08,
+      "seed": 54,
+      "train_size": 256,
+      "train_steps": 80
+    }
+  },
+  "preset": "smoke",
+  "seeds": [
+    50,
+    51,
+    52,
+    53,
+    54
+  ]
+}

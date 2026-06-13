@@ -14,7 +14,7 @@
 \maketitle
 
 \begin{abstract}
-Rectified-flow trajectory generators make it cheap to draw many plausible futures before acting. This paper studies the audit problem created by that convenience: when a learned proxy selects an upper-tail generated trajectory, is the selected future actually better, or has the generator exposed off-manifold artifacts that the proxy overrates? We train a conditional rectified-flow model on a two-mode point-mass world and evaluate selected futures under a deliberately incomplete value proxy with held-out true returns. The audit measures realized return, proxy-realized gap, feature-space distance from the training manifold, selection bias, and mode entropy as candidate budget grows. Across five seeds, proxy-tail selection at the largest budget reduces mean true return from \(-64.03\) for the first sampled candidate to \(-95.68\), while increasing the mean proxy-realized gap to \(141.66\) and feature-space OOD distance to \(321.12\). A calibration penalty based on training-trajectory features improves mean true return to \(-41.57\), reduces the gap to \(69.14\), and reduces OOD distance to \(155.68\). The claim is intentionally scoped: this is a falsifiable tail audit for rectified-flow world-model trajectories, not a general planning algorithm or evidence about robotics-scale systems.
+Rectified-flow trajectory generators make it cheap to draw many plausible futures before acting. This paper studies the audit problem created by that convenience: when a learned proxy selects an upper-tail generated trajectory, is the selected future actually better, or has the generator exposed off-manifold artifacts that the proxy overrates? We train a conditional rectified-flow model on a two-mode point-mass world and evaluate selected futures under a deliberately incomplete value proxy with held-out true returns. The audit measures realized return, proxy-realized gap, feature-space distance from the training manifold, selection bias, mode entropy, and Euler-step consistency as candidate budget grows. Across five seeds, proxy-tail selection at the largest budget reduces mean true return from \(-64.03\) for the first sampled candidate to \(-95.68\), while increasing the mean proxy-realized gap to \(141.66\) and feature-space OOD distance to \(321.12\). A calibration penalty based on training-trajectory features improves mean true return to \(-41.57\), reduces the gap to \(69.14\), and reduces OOD distance to \(155.68\). A separate Euler-step sweep shows the proxy-tail failure persists at 4, 8, and 16 integration steps, while a residual-only flow-consistency control reduces step sensitivity without solving true return. The claim is intentionally scoped: this is a falsifiable tail audit for rectified-flow world-model trajectories, not a general planning algorithm or evidence about robotics-scale systems.
 \end{abstract}
 
 \section{Introduction}
@@ -37,7 +37,7 @@ i_{\mathrm{cal}} = \arg\max_i \hat R(x_i,c) - \lambda u(x_i,c),
 \]
 where \(u\) is the standardized distance of trajectory features from the training set and \(\lambda\) is fixed before evaluation. We compare both selectors to the first sampled candidate, which acts as a budget-invariant control.
 
-The audit reports five quantities. True return \(R\) is computed by a hidden synthetic evaluator that penalizes endpoint error, obstacle collision, roughness, path length, and backward motion. The proxy-realized gap is \(\hat R - R\) on the selected trajectory. OOD distance is \(u\). Selection bias is the selected proxy score minus the mean proxy score in the same candidate pool. Mode entropy measures whether selection collapses onto one of the two obstacle-avoidance modes.
+The audit reports six quantities. True return \(R\) is computed by a hidden synthetic evaluator that penalizes endpoint error, obstacle collision, roughness, path length, and backward motion. The proxy-realized gap is \(\hat R - R\) on the selected trajectory. OOD distance is \(u\). Selection bias is the selected proxy score minus the mean proxy score in the same candidate pool. Mode entropy measures whether selection collapses onto one of the two obstacle-avoidance modes. Euler-step residual measures how much a candidate changes when the same base noise is integrated with coarse versus fine rectified-flow steps.
 
 \paragraph{Calibration sanity check.}
 If \(|R(x_i,c)-\hat R(x_i,c)| \le \beta u(x_i,c)\) for every candidate in a pool, then for any comparison candidate \(j\), the calibrated selector with \(\lambda=\beta\) satisfies
@@ -108,6 +108,16 @@ Proxy-tail selection produces the largest feature-space OOD distance and the lar
 \paragraph{Result 3: the repair is useful but not a universal solution.}
 The feature penalty improves this synthetic benchmark, but it is not claimed as an optimal planner. It uses hand-built trajectory features, assumes access to a training-manifold statistic, and is evaluated only in a small point-mass world. Its value is to make the audit actionable: when proxy-tail selection fails, the calibrated tail gives a simple falsifiable check that the failure is tied to off-manifold proxy exploitation.
 
+\paragraph{Result 4: the failure is not just a coarse-integration artifact.}
+The v3 step sweep trains five additional smoke-scale flows and resamples the same base noises with 4, 8, and 16 Euler steps. Proxy-tail true return remains below the first candidate by \(-43.63\), \(-44.38\), and \(-43.59\), respectively. Feature calibration improves true return over proxy-tail selection by \(69.90\), \(70.40\), and \(69.64\). A residual-only selector reduces fine-vs-coarse step residual on average, but improves true return over the proxy tail by only \(0.90\), \(1.38\), and \(0.00\). Thus numerical step sensitivity is an informative flow-specific control, not the mechanism that explains away the proxy-tail failure.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figures/flow_step_sweep.png}
+\caption{Euler-step consistency stress. Proxy-tail harm persists as the rectified-flow sampler is integrated with more Euler steps. A residual-only selector lowers step sensitivity but does not recover true return, while the feature-calibrated audit remains the stronger repair in this synthetic setting.}
+\label{fig:step-sweep}
+\end{figure}
+
 \section{Related Work}
 
 Flow Matching \cite{lipman2023} and Rectified Flow \cite{liu2023} provide the generative modeling foundation for this experiment. Stochastic interpolants and diffusion probability-flow views make clear that rectified-flow samplers share many behaviors with other continuous generative models; this paper therefore avoids claims of flow-specific uniqueness. World-model systems such as PlaNet, Dreamer, TD-MPC, EfficientZero, and DreamerV3 \cite{hafner2023} are broader control algorithms than the small audit here. Diffuser-style trajectory generation \cite{janner2022} is a close neighbor because it also treats behavior as conditional trajectory generation. Reward-model overoptimization \cite{gao2023} is the parent phenomenon for proxy-selected tails. The contribution here is the rectified-flow trajectory audit: continuous paths, physical-validity features, candidate-pool diagnostics, and held-out true returns in a reproducible harness.
@@ -122,8 +132,9 @@ The repository contains the exact scripts used for the results:
 \begin{itemize}
 \item \texttt{experiments/run\_synthetic.py} regenerates the seed-0 figures.
 \item \texttt{experiments/run\_multiseed.py} writes the five-seed aggregate.
+\item \texttt{experiments/run\_step\_sweep.py} runs the Euler-step consistency stress audit.
 \item \texttt{scripts/run\_claim\_audit.py} checks the paper's quantitative claims.
-\item \texttt{scripts/build\_paper.py} compiles and copies the final PDF.
+\item \texttt{scripts/build\_paper.py} compiles the local final PDF.
 \end{itemize}
 Unit tests cover selector behavior, metric shapes, diagnostic outputs, and deterministic tiny-run reproducibility.
 

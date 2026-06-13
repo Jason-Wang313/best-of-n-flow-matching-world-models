@@ -13,15 +13,16 @@ python -m pip install -e .[dev]
 python -m pytest
 python experiments/run_synthetic.py --preset smoke --output results/smoke
 python experiments/run_multiseed.py --preset smoke --seeds 0,1,2,3,4 --output results/multiseed
+python experiments/run_step_sweep.py --preset smoke --seeds 50,51,52,53,54 --output results/step_sweep
 python scripts/run_claim_audit.py
 python scripts/build_paper.py
 ```
 
 The paper build writes:
 
-- `paper/final/iclr_submission.pdf`
-- `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v2.pdf`
-- `C:\Users\wangz\Downloads\iclr_submission_flow_matching_world_models.pdf`
+- `paper/final/best of n flow matching world models-v3.pdf`
+
+Desktop publishing is intentionally separate and should happen only after the source is committed, pushed, and remote-verified.
 
 ## Repository Layout
 
@@ -46,6 +47,7 @@ The synthetic world is a 2D point mass moving from `(0, 0)` to a context-depende
 - selected-tail exploitation gap,
 - candidate and selected trajectory diversity,
 - feature-space out-of-distribution distance,
+- rectified-flow Euler-step consistency,
 - selection bias as candidate budget `N` increases.
 
 ## Reproducibility

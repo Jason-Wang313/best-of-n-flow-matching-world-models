@@ -7,9 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PAPER = ROOT / "paper"
-FINAL = PAPER / "final" / "iclr_submission.pdf"
-DOWNLOADS = Path.home() / "Downloads" / "iclr_submission_flow_matching_world_models.pdf"
-DESKTOP = Path.home() / "OneDrive" / "Desktop" / "best of n flow matching world models-v2.pdf"
+FINAL = PAPER / "final" / "best of n flow matching world models-v3.pdf"
 FAILURE_LOG = ROOT / "docs" / "latex_failure.txt"
 SCRATCH_EXTENSIONS = [".aux", ".log", ".out", ".toc", ".bbl", ".blg"]
 
@@ -48,15 +46,9 @@ def main() -> None:
     if not source_pdf.exists():
         raise SystemExit("LaTeX reported success but paper/main.pdf was not created")
     shutil.copy2(source_pdf, FINAL)
-    DOWNLOADS.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source_pdf, DOWNLOADS)
-    DESKTOP.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source_pdf, DESKTOP)
     if FAILURE_LOG.exists():
         FAILURE_LOG.unlink()
     print(f"wrote {FINAL}")
-    print(f"wrote {DOWNLOADS}")
-    print(f"wrote {DESKTOP}")
 
 
 if __name__ == "__main__":

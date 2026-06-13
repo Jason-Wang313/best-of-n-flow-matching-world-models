@@ -35,7 +35,7 @@ This document argues against the project as if reviewing it skeptically.
    Abstractly yes. The paper presents it only as a diagnostic baseline tied to trajectory-manifold distance.
 
 3. Is the flow model doing anything a diffusion model would not?
-   Not proven. The experiment supports a rectified-flow instance of a broader generative-reranking risk.
+   Not proven. The experiment supports a rectified-flow instance of a broader generative-reranking risk. The v3 Euler-step sweep does add a flow-specific negative control: proxy-tail harm persists when increasing integration steps, and residual-only reranking lowers step sensitivity without solving true return.
 
 4. Is the paper submission-ready?
    The rewritten version has a distinct framing, repeated-seed evidence, tests, a claim audit, and explicit limitations. The remaining weakness is scope: it is still synthetic and should not overclaim beyond the audit setting.

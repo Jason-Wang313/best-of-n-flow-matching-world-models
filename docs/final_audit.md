@@ -13,8 +13,8 @@ This audit records the current submission-facing state after the Paper 8 refacto
 - Multi-seed evidence: `experiments/run_multiseed.py` writes `results/multiseed/summary.csv`, `aggregate.csv`, and `aggregate.json`.
 - Claim gate: `scripts/run_claim_audit.py` checks five-seed evidence before paper claims are accepted.
 - Anonymous paper source: `paper/main.tex`.
-- Final PDF target: `paper/final/iclr_submission.pdf`.
-- Visible Desktop PDF target: `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v2.pdf`.
+- Final PDF target: `paper/final/best of n flow matching world models-v3.pdf`.
+- Visible Desktop PDF target after commit/push verification: `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v3.pdf`.
 
 ## Verification Log
 
@@ -27,6 +27,8 @@ pytest -q
 python experiments/run_synthetic.py --preset smoke --output results/smoke --paper-figures paper/figures
 
 python experiments/run_multiseed.py --preset smoke --seeds 0,1,2,3,4 --output results/multiseed
+
+python experiments/run_step_sweep.py --preset smoke --seeds 50,51,52,53,54 --output results/step_sweep --paper-figures paper/figures
 
 python scripts/run_claim_audit.py
 # status: pass
@@ -44,6 +46,12 @@ Five-seed aggregate at maximum candidate budget:
 
 Interpretation: proxy-tail selection increases apparent value while worsening realized return and moving farther from the training trajectory manifold. The calibrated tail improves true return and reduces both gap and OOD distance in the synthetic audit.
 
+Euler-step sweep:
+
+- Proxy-tail true return remains below first-candidate selection by -43.87 on average across 4, 8, and 16 Euler steps.
+- Feature-calibrated selection improves true return over proxy-tail selection by 69.98 on average.
+- Flow-residual-only selection reduces fine-vs-coarse step residual on average, but is not promoted as the main repair.
+
 ## Novelty Audit
 
 The paper no longer presents itself as a generic candidate-count or reward-hacking result. Its distinct identity is a rectified-flow trajectory audit:
@@ -52,6 +60,7 @@ The paper no longer presents itself as a generic candidate-count or reward-hacki
 - selection evaluated at the upper proxy tail rather than average sample quality;
 - held-out true-return diagnostics on selected futures;
 - feature-space OOD and mode-entropy diagnostics tied to trajectory validity;
+- Euler-step consistency stress showing the failure is not merely a coarse-integration artifact;
 - a five-seed claim gate that prevents unsupported claims from entering the paper.
 
 ## Known Limitations

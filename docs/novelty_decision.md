@@ -15,6 +15,7 @@ Prior reward-model overoptimization work already explains why proxy maximization
 - the generator produces continuous trajectories by integrating a learned vector field;
 - evaluation focuses on the selected upper tail rather than average sample quality;
 - diagnostics connect proxy-realized gap, physical validity, training-manifold distance, and mode entropy;
+- an Euler-step sweep separates proxy exploitation from coarse numerical integration artifacts;
 - the claim is supported by a repeated-seed audit and a machine-checkable claim gate.
 
 ## Theory Inclusion
