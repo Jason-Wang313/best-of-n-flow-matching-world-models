@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from experiments.run_synthetic import run_experiment
-from flow_matching_bon.config import ExperimentConfig
+from flow_tail_audit.config import ExperimentConfig
 
 
 def test_tiny_experiment_is_reproducible(tmp_path: Path):

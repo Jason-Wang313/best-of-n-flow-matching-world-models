@@ -4,38 +4,38 @@ This document argues against the project as if reviewing it skeptically.
 
 ## Most Damaging Prior Work
 
-**Reward model overoptimization already explains the main effect.** Gao, Schulman, and Hilton explicitly study Best-of-N sampling against a proxy reward model. If this repo only shows that selecting the maximum proxy score can hurt true reward, the contribution is not new.
+**Reward-model overoptimization already explains the broad effect.** If the paper only says "a proxy can be overoptimized," it is not novel. The manuscript must keep the contribution tied to rectified-flow trajectory audits and selected-future diagnostics.
 
-**Regularized Best-of-N already suggests the repair.** Work on regularized Best-of-N and minimum Bayes risk reranking shows that adding a penalty to reranking can mitigate reward hacking. An uncertainty penalty in trajectory-feature space is best described as a domain adaptation of this idea.
+**Regularized reranking already suggests the repair.** A penalty on proxy scores is not a new algorithmic idea. The paper should treat feature-space calibration as a sanity-check baseline, not as the central method.
 
-**Diffusion planners already optimize generated trajectories.** Diffuser and Decision Diffuser show that generative trajectory models can be sampled, guided, or conditioned. A claim about "generative world models" must separate reranking-specific pathologies from ordinary planning errors.
+**Diffusion planners and trajectory generators are close neighbors.** Diffuser, Decision Diffuser, and related trajectory-generation methods already sample or guide trajectories. The paper must avoid claiming a general generative-planning result without a diffusion baseline.
 
-**World-model RL has stronger baselines.** DreamerV3, TD-MPC2, EfficientZero, and MuZero-style methods are more mature than the toy setup here. The repo cannot claim algorithmic superiority over model-based RL.
+**World-model RL has stronger baselines.** DreamerV3, TD-MPC2, EfficientZero, and MuZero-style systems are much more mature than this synthetic audit. The paper should not present itself as a competitive model-based RL algorithm.
 
 ## Claims To Avoid
 
-- Avoid: "Best-of-N breaks flow-matching world models."
-- Avoid: "Uncertainty-penalized reranking solves reward hacking."
-- Avoid: "Rectified flow has a unique Goodhart failure."
-- Avoid: "The synthetic point-mass experiment predicts robotics or video-model behavior."
+- Avoid: "Rectified-flow world models fail under large candidate budgets."
+- Avoid: "Feature-space calibration solves proxy exploitation."
+- Avoid: "This is a new planning algorithm."
+- Avoid: "The point-mass evidence predicts robotics, video, or pixel-control behavior."
 
 ## Claims That Survive
 
-- Best-of-N can amplify proxy error in a conditional rectified-flow trajectory generator.
-- The amplification is measurable with true-vs-predicted return gap, feature-space OOD distance, and selected-mode entropy.
-- In this synthetic setting, an uncertainty penalty reduces proxy exploitation relative to naive proxy-only selection.
-- The right next experiment is to replace hand-built features with learned uncertainty or model-consistency diagnostics on a standard offline-control benchmark.
+- Proxy-selected upper-tail futures can be worse than budget-invariant first candidates in a conditional rectified-flow trajectory generator.
+- The failure is measurable through held-out true return, proxy-realized gap, feature-space OOD distance, selection bias, and mode entropy.
+- In the five-seed synthetic audit, the calibrated tail improves true return and reduces gap and OOD distance relative to the proxy tail.
+- The artifact is a reproducible tail-value audit that future work can scale to learned uncertainty and standard control benchmarks.
 
 ## Reviewer Questions
 
 1. Is the proxy model too artificial?
-   Yes. It is intentionally misspecified to isolate the mechanism. A stronger paper needs learned value functions with held-out true returns.
+   Yes, by design. It isolates omitted-feature proxy exploitation. The paper scopes claims accordingly and calls for learned value models in future work.
 
-2. Is the repair just regularized Best-of-N?
-   Mostly yes. The contribution is not the abstract penalty; it is the domain-specific diagnostic that connects penalty to trajectory-manifold distance.
+2. Is the repair just regularized reranking?
+   Abstractly yes. The paper presents it only as a diagnostic baseline tied to trajectory-manifold distance.
 
 3. Is the flow model doing anything a diffusion model would not?
-   Not yet. The experiment supports a flow-matching instance of a broader generative-reranking risk. It does not prove uniqueness.
+   Not proven. The experiment supports a rectified-flow instance of a broader generative-reranking risk.
 
-4. Is the paper ICLR-ready?
-   As a first pass, no. It is a runnable pilot and paper draft. It needs larger benchmarks, ablations, and at least one non-synthetic setting.
+4. Is the paper submission-ready?
+   The rewritten version has a distinct framing, repeated-seed evidence, tests, a claim audit, and explicit limitations. The remaining weakness is scope: it is still synthetic and should not overclaim beyond the audit setting.

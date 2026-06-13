@@ -1,7 +1,7 @@
 import numpy as np
 
-from flow_matching_bon.data import generate_contexts, generate_expert_trajectories, make_rng
-from flow_matching_bon.metrics import fit_proxy_value, trajectory_features, true_return
+from flow_tail_audit.data import generate_contexts, generate_expert_trajectories, make_rng
+from flow_tail_audit.metrics import fit_proxy_value, trajectory_features, true_return
 
 
 def test_true_return_penalizes_obstacle_collision():

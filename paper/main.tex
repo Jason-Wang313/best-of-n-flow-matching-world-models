@@ -2,10 +2,11 @@
 
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
+\usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{hyperref}
 
-\title{Best-of-N Inference Can Exploit Proxy Scores in Flow-Matching World Models}
+\title{Tail-Value Audits for Rectified-Flow Trajectory World Models}
 \author{Anonymous Authors}
 \date{}
 
@@ -13,49 +14,53 @@
 \maketitle
 
 \begin{abstract}
-Flow-matching and rectified-flow models offer fast conditional generation of continuous trajectories, making them attractive as world models for planning. A tempting inference strategy is to sample many candidate futures and select the one with the largest learned value score. We study this Best-of-N procedure in a controlled synthetic setting. A conditional rectified-flow trajectory generator is trained on two-mode point-mass trajectories around an obstacle, while a misspecified proxy value model reranks generated futures. We find that increasing the candidate budget can improve proxy score while selecting trajectories with larger true-vs-predicted gaps and greater feature-space distance from the training manifold. A simple uncertainty penalty reduces this exploitation in the synthetic task. The result is best read as a diagnostic pilot: the parent phenomenon is reward-model overoptimization, and the contribution is a concrete measurement harness for flow-generated world-model trajectories.
+Rectified-flow trajectory generators make it cheap to draw many plausible futures before acting. This paper studies the audit problem created by that convenience: when a learned proxy selects an upper-tail generated trajectory, is the selected future actually better, or has the generator exposed off-manifold artifacts that the proxy overrates? We train a conditional rectified-flow model on a two-mode point-mass world and evaluate selected futures under a deliberately incomplete value proxy with held-out true returns. The audit measures realized return, proxy-realized gap, feature-space distance from the training manifold, selection bias, and mode entropy as candidate budget grows. Across five seeds, proxy-tail selection at the largest budget reduces mean true return from \(-64.03\) for the first sampled candidate to \(-95.68\), while increasing the mean proxy-realized gap to \(141.66\) and feature-space OOD distance to \(321.12\). A calibration penalty based on training-trajectory features improves mean true return to \(-41.57\), reduces the gap to \(69.14\), and reduces OOD distance to \(155.68\). The claim is intentionally scoped: this is a falsifiable tail audit for rectified-flow world-model trajectories, not a general planning algorithm or evidence about robotics-scale systems.
 \end{abstract}
 
 \section{Introduction}
 
-World models support planning by predicting futures under candidate actions. Flow-matching and rectified-flow models are appealing for this role because they learn vector fields that transport simple noise into structured samples with few ODE steps. Once such a model can generate whole trajectories, a natural planner is Best-of-N inference: sample $N$ futures, score each with a value model, and execute or study the highest-scoring candidate.
+Generative world models increasingly make planning look like conditional generation: sample futures, score them, and inspect the most promising trajectory before execution. Rectified-flow models are attractive in this role because a learned vector field can transport base noise into structured continuous trajectories with a small number of Euler steps \cite{lipman2023,liu2023}. The safety question is not only whether average samples look plausible. A planner or analyst often cares about the upper tail selected by a learned proxy, and that tail can be where model errors concentrate.
 
-This paper asks whether that interface is safe under proxy error. Prior work on reward-model overoptimization already shows that Best-of-N can Goodhart an imperfect reward model. The narrower question here is what that looks like for continuous trajectories sampled from a conditional rectified-flow world model. We focus on diagnostics: selection bias, selected trajectory diversity, feature-space out-of-distribution distance, and true-vs-predicted return gap.
+This paper frames the problem as a \emph{tail-value audit}. Given a conditional rectified-flow trajectory generator and a proxy value model, we ask whether the selected high-proxy futures remain close to the training trajectory manifold and whether their true task return improves with candidate budget. The audit is deliberately modest. It does not claim that rectified flows have a unique pathology, that all generative planning fails at large candidate budgets, or that a feature penalty solves reward hacking. It provides a compact measurement harness for one failure surface: proxy-seeking futures sampled from a flow-generated trajectory pool.
 
-\section{Setup}
+The project is differentiated from the surrounding papers in this collection by its object of study. It is not about language-model answer selection, RSSM latent imagination, memory-augmented rollouts, Bayesian ensembles, differentiable physics, or diffusion policies. The unit under audit is a continuous trajectory generated by integrating a rectified-flow vector field. The main question is whether the chosen upper tail is physically useful or merely far from the data manifold in ways the proxy fails to penalize.
 
-The synthetic environment is a two-dimensional point mass. Each context specifies a goal height, obstacle radius, and lateral wind coefficient. Expert trajectories move from $(0,0)$ to $(1,g_y)$ using one of two modes around the obstacle. The generator is trained as a rectified flow: for data trajectory $x_1$, Gaussian base sample $x_0$, and interpolation time $t$, the model predicts
+\section{Audit Protocol}
+
+Let \(p_\theta(x \mid c)\) be a conditional rectified-flow trajectory generator for context \(c\). For each context, we sample a candidate pool \(\{x_i\}_{i=1}^N\) and score each trajectory with a learned proxy \(\hat R(x_i,c)\). The proxy-tail selector chooses
+\[
+i_{\mathrm{tail}} = \arg\max_i \hat R(x_i,c).
+\]
+The calibrated selector subtracts a feature-space distance penalty,
+\[
+i_{\mathrm{cal}} = \arg\max_i \hat R(x_i,c) - \lambda u(x_i,c),
+\]
+where \(u\) is the standardized distance of trajectory features from the training set and \(\lambda\) is fixed before evaluation. We compare both selectors to the first sampled candidate, which acts as a budget-invariant control.
+
+The audit reports five quantities. True return \(R\) is computed by a hidden synthetic evaluator that penalizes endpoint error, obstacle collision, roughness, path length, and backward motion. The proxy-realized gap is \(\hat R - R\) on the selected trajectory. OOD distance is \(u\). Selection bias is the selected proxy score minus the mean proxy score in the same candidate pool. Mode entropy measures whether selection collapses onto one of the two obstacle-avoidance modes.
+
+\paragraph{Calibration sanity check.}
+If \(|R(x_i,c)-\hat R(x_i,c)| \le \beta u(x_i,c)\) for every candidate in a pool, then for any comparison candidate \(j\), the calibrated selector with \(\lambda=\beta\) satisfies
+\[
+R(x_{i_{\mathrm{cal}}},c) \ge R(x_j,c) - \beta u(x_j,c) - \beta u(x_{i_{\mathrm{cal}}},c).
+\]
+This is a standard robust-selection lens, not the paper's novelty. It clarifies why the penalty must be evaluated empirically: if \(u\) is poorly calibrated or misses the relevant proxy error, the inequality gives no useful practical guarantee.
+
+\section{Synthetic Rectified-Flow World}
+
+The environment is a two-dimensional point mass moving from \((0,0)\) to a context-dependent goal while avoiding a circular obstacle. Each context specifies goal height, obstacle radius, and lateral wind. Expert trajectories use two modes around the obstacle, which makes diversity meaningful without requiring a large simulator.
+
+The generator is trained as a conditional rectified flow. For data trajectory \(x_1\), Gaussian base sample \(x_0\), and interpolation time \(t\), the vector field predicts
 \[
 v_\theta((1-t)x_0 + t x_1, t, c) \approx x_1 - x_0.
 \]
-At inference, Euler integration maps Gaussian noise to candidate trajectories conditioned on context $c$.
+At inference, Euler integration maps Gaussian noise to complete candidate trajectories conditioned on \(c\). The proxy value model is a ridge regressor trained on endpoint and mode-height features only. It intentionally omits direct obstacle-collision, roughness, path-length, and backtracking terms. This makes the proxy accurate enough near the expert manifold but vulnerable to selected upper-tail artifacts.
 
-The proxy value model is a ridge-regression scorer trained on expert trajectories. It deliberately omits direct obstacle-collision and monotonicity features, so it is accurate near the expert manifold but vulnerable when reranking searches unusual generated samples. The true return penalizes endpoint error, collision depth, path roughness, path length, and backward motion.
+\section{Experiments}
 
-\section{Best-of-N And Repair}
+We run a smoke-scale experiment for visual diagnostics and a five-seed repeated audit for claims. Each seed trains a conditional rectified-flow generator, fits the proxy on training trajectories, samples evaluation contexts, and scores candidate pools with \(N \in \{1,2,4,8,16\}\). The single-seed figures use seed 0; the table reports mean \(\pm\) standard deviation over seeds 0--4 at \(N=16\). All artifacts are generated by the repository scripts.
 
-For each context, candidates $\{x_i\}_{i=1}^N$ are sampled from the flow model and scored by a proxy $\hat R(x_i,c)$. Naive Best-of-N selects
-\[
-i^\star = \arg\max_i \hat R(x_i,c).
-\]
-The repair baseline estimates feature-space uncertainty $u(x,c)$ from training trajectories and selects
-\[
-i^\star_\lambda = \arg\max_i \hat R(x_i,c) - \lambda u(x_i,c).
-\]
-This is not proposed as a new general algorithm. It is a robust reranking sanity check.
-
-\paragraph{Bound.}
-Assume $|R(x_i,c)-\hat R(x_i,c)| \le \beta u(x_i,c)$ for all candidates. Let $j$ be any candidate and let $i^\star_\beta$ maximize $\hat R(x_i,c)-\beta u(x_i,c)$. Then
-\[
-R(x_{i^\star_\beta},c) \ge R(x_j,c) - 2\beta u(x_j,c).
-\]
-The proof follows by lower-bounding the selected candidate by its penalized proxy objective and upper-bounding the comparison candidate's proxy by its true return plus uncertainty. The proposition is only a calibration lens; the experiment does not prove that the bound holds in general.
-
-\section{Experiment}
-
-We run a smoke-scale experiment with fixed random seed. The diagnostics in Figure~\ref{fig:diagnostics} compare random first-candidate selection, proxy-only Best-of-N, and uncertainty-penalized Best-of-N as $N$ increases.
-
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
 \begin{minipage}{0.48\linewidth}
 \centering
@@ -75,19 +80,56 @@ We run a smoke-scale experiment with fixed random seed. The diagnostics in Figur
 \centering
 \includegraphics[width=\linewidth]{figures/diversity_vs_n.png}
 \end{minipage}
-\caption{Smoke diagnostics for Best-of-N reranking. Proxy-only selection tends to increase predicted return and selection bias, but can also increase true-vs-predicted gap and feature-space OOD distance. The uncertainty penalty is a small repair baseline, not a complete solution.}
+\caption{Seed-0 tail audit. Proxy-tail selection increases predicted value but moves selected trajectories toward larger proxy-realized gaps and higher feature-space OOD distance. The calibrated tail reduces those failure signals in this synthetic setting.}
 \label{fig:diagnostics}
 \end{figure}
 
+\begin{table}[t]
+\centering
+\caption{Five-seed audit at candidate budget \(N=16\). Higher true return is better; lower gap and OOD distance are better.}
+\label{tab:multiseed}
+\begin{tabular}{lccc}
+\toprule
+Selector & True return & Proxy-realized gap & OOD distance \\
+\midrule
+First candidate & \(-64.03 \pm 4.23\) & \(88.88 \pm 6.97\) & \(263.79 \pm 11.96\) \\
+Proxy tail & \(-95.68 \pm 5.03\) & \(141.66 \pm 5.76\) & \(321.12 \pm 23.84\) \\
+Calibrated tail & \(-41.57 \pm 1.90\) & \(69.14 \pm 4.93\) & \(155.68 \pm 4.95\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Result 1: the selected proxy tail is not the best executable tail.}
+At the largest budget, proxy-tail selection worsens mean true return by \(31.65\) relative to the first candidate and by \(54.11\) relative to the calibrated selector. The selected proxy score is high, but the true return shows that the selected trajectory is often exploiting omitted features rather than solving the task.
+
+\paragraph{Result 2: manifold distance predicts the failure surface.}
+Proxy-tail selection produces the largest feature-space OOD distance and the largest proxy-realized gap. The calibrated selector reduces OOD distance by \(165.44\) and the proxy-realized gap by \(72.51\) relative to proxy-tail selection. This supports the audit interpretation: the problem is not only high variance in generated trajectories, but high-proxy selection of trajectories that are far from the feature distribution used to train the proxy.
+
+\paragraph{Result 3: the repair is useful but not a universal solution.}
+The feature penalty improves this synthetic benchmark, but it is not claimed as an optimal planner. It uses hand-built trajectory features, assumes access to a training-manifold statistic, and is evaluated only in a small point-mass world. Its value is to make the audit actionable: when proxy-tail selection fails, the calibrated tail gives a simple falsifiable check that the failure is tied to off-manifold proxy exploitation.
+
 \section{Related Work}
 
-Flow Matching introduced simulation-free vector-field training for continuous normalizing flows, and Rectified Flow specialized this view around straight transports. Stochastic interpolants and probability-flow ODEs make clear that many sampling issues are shared across flow and diffusion families. World-model methods such as PlaNet, Dreamer, DreamerV3, EfficientZero, and TD-MPC2 provide stronger full-control baselines than the toy system here. Diffuser and Decision Diffuser are close neighbors because they cast decision making as generative trajectory modeling. Best-of-N reward-model overoptimization, especially the scaling-law analysis of Gao, Schulman, and Hilton, is the direct parent phenomenon. This work should therefore be read as a flow-trajectory diagnostic, not as a discovery of Goodhart effects.
+Flow Matching \cite{lipman2023} and Rectified Flow \cite{liu2023} provide the generative modeling foundation for this experiment. Stochastic interpolants and diffusion probability-flow views make clear that rectified-flow samplers share many behaviors with other continuous generative models; this paper therefore avoids claims of flow-specific uniqueness. World-model systems such as PlaNet, Dreamer, TD-MPC, EfficientZero, and DreamerV3 \cite{hafner2023} are broader control algorithms than the small audit here. Diffuser-style trajectory generation \cite{janner2022} is a close neighbor because it also treats behavior as conditional trajectory generation. Reward-model overoptimization \cite{gao2023} is the parent phenomenon for proxy-selected tails. The contribution here is the rectified-flow trajectory audit: continuous paths, physical-validity features, candidate-pool diagnostics, and held-out true returns in a reproducible harness.
 
-\section{Discussion}
+\section{Limitations}
 
-The evidence supports a modest conclusion: in a controlled rectified-flow trajectory generator, increasing the candidate budget can move selection toward proxy-exploiting samples. A feature-space uncertainty penalty reduces the effect in the smoke setting. The main value of the repo is the harness: it makes selection bias, diversity collapse, OOD distance, and true-vs-proxy gaps visible in one small experiment.
+The experiment is synthetic and intentionally small. The proxy is deliberately incomplete, not a learned high-capacity value model. The uncertainty score is feature-space distance, not an ensemble, conformal, or flow-consistency uncertainty estimator. There is no standard offline-control benchmark, no robotics or video evidence, and no comparison to diffusion trajectory generators under the same proxy. The right interpretation is therefore narrow: this paper supplies an auditable failure case and a measurement protocol that future work can scale or falsify.
 
-The next version should add a diffusion trajectory baseline, learned uncertainty, stronger value models, and standard offline-control tasks. Without those additions, the paper is a first-pass artifact rather than a complete ICLR-ready empirical result.
+\section{Reproducibility}
+
+The repository contains the exact scripts used for the results:
+\begin{itemize}
+\item \texttt{experiments/run\_synthetic.py} regenerates the seed-0 figures.
+\item \texttt{experiments/run\_multiseed.py} writes the five-seed aggregate.
+\item \texttt{scripts/run\_claim\_audit.py} checks the paper's quantitative claims.
+\item \texttt{scripts/build\_paper.py} compiles and copies the final PDF.
+\end{itemize}
+Unit tests cover selector behavior, metric shapes, diagnostic outputs, and deterministic tiny-run reproducibility.
+
+\section{Conclusion}
+
+Rectified-flow trajectory models can produce plausible average samples while their proxy-selected upper tail becomes less executable as candidate budget grows. A tail-value audit exposes this by measuring true return, proxy-realized gap, OOD distance, selection bias, and mode entropy on the selected trajectory rather than only on the sample pool. In the controlled setting studied here, a feature-space calibration penalty substantially reduces the failure, but the main contribution is the audit lens and reproducible evidence, not a broad planner.
 
 \begin{thebibliography}{9}
 

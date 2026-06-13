@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "flow-matching-bon"
+name = "flow-tail-audit"
 version = "0.1.0"
-description = "Synthetic Best-of-N inference diagnostics for flow-matching world models."
+description = "Synthetic tail-value diagnostics for rectified-flow trajectory world models."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -26,6 +26,6 @@ dev = [
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = [".", "src"]
 testpaths = ["tests"]
 addopts = "-q"

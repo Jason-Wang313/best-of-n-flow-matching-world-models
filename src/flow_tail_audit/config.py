@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    """Configuration for the synthetic Best-of-N experiment."""
+    """Configuration for the synthetic rectified-flow tail-audit experiment."""
 
     seed: int = 0
     horizon: int = 24

@@ -1,12 +1,12 @@
 # Literature Map
 
-This map was written before choosing the final paper angle. The purpose is to identify what would make the project non-novel or overclaimed.
+This map identifies what would make the project non-novel or overclaimed.
 
 ## Flow Matching And Rectified Flow
 
-Flow Matching trains continuous normalizing flows by regressing vector fields along probability paths rather than simulating a diffusion process during training. Lipman et al. introduced the framework and showed that optimal-transport paths can improve training and sampling efficiency. Rectified Flow, from Liu, Gong, and Liu, is especially relevant because it learns straight transports between base and data distributions and can be sampled with a small number of ODE steps.
+Flow Matching trains continuous normalizing flows by regressing vector fields along probability paths rather than simulating a diffusion process during training. Rectified Flow specializes this view around straight transports between base and data distributions and can often be sampled with few ODE steps.
 
-The immediate novelty pressure is that many failure modes of deterministic ODE samplers are not unique to rectified flow. Stochastic interpolants, probability-flow ODEs, consistency models, and diffusion guidance all blur the boundary between "flow-specific" and "generic generative model" claims. A defensible paper should therefore focus on the interface between flow-generated trajectories and inference-time selection, not on broad claims about flow matching itself.
+The novelty pressure is that many sampler and guidance failures are not unique to rectified flow. Stochastic interpolants, probability-flow ODEs, consistency models, and diffusion guidance all blur the boundary between "flow-specific" and "generic generative model" claims. The paper therefore focuses on the selected upper tail of flow-generated trajectories rather than claiming a unique rectified-flow pathology.
 
 Key sources:
 
@@ -17,9 +17,9 @@ Key sources:
 
 ## World Models And Model-Based Control
 
-World-model work already has mature answers for planning under learned dynamics: PlaNet, Dreamer, DreamerV2/V3, TD-MPC, TD-MPC2, EfficientZero, and MuZero-like search systems. These systems do not merely sample many futures and pick the largest proxy score; they learn latent dynamics, value functions, policies, and planning procedures jointly or iteratively.
+World-model work already has mature planning systems: PlaNet, Dreamer, DreamerV2/V3, TD-MPC, TD-MPC2, EfficientZero, and MuZero-like search systems. These methods learn latent dynamics, value functions, policies, and planning procedures jointly or iteratively. This repo cannot claim algorithmic superiority over model-based RL.
 
-This project is therefore not positioned as a competitive model-based RL algorithm. It is a diagnostic artifact for a narrower pattern: whole-trajectory generative sampling plus post-hoc value reranking.
+The defensible position is narrower: when a conditional trajectory generator and a learned proxy are used as a post-hoc selection interface, the selected future should be audited for physical validity, manifold distance, and realized return.
 
 Key sources:
 
@@ -31,9 +31,9 @@ Key sources:
 
 ## Diffusion And Trajectory Generators
 
-Diffuser, Decision Diffuser, trajectory diffusion, and flow-matching policies already cast decision making as conditional trajectory generation. These papers are the closest neighbors. They establish that generative samplers can be used for planning and policy generation, but they also make clear that sampling, guidance, conditioning, and reranking are design choices with different failure surfaces.
+Diffuser, Decision Diffuser, trajectory diffusion, and flow-matching policies already cast behavior as conditional trajectory generation. They establish that generative samplers can support planning and policy generation, but sampling, guidance, conditioning, and reranking create different failure surfaces.
 
-The final angle should avoid saying "generative planning fails under Best-of-N" as if that were new. The more precise question is whether proxy reranking exposes an off-manifold candidate-selection issue that is easy to miss when evaluating only average sample quality.
+The paper should therefore avoid saying "generative planning fails" as if that were new. The precise gap is whether a selected high-proxy trajectory from a rectified-flow candidate pool is still executable and close to the training trajectory manifold.
 
 Key sources:
 
@@ -42,11 +42,11 @@ Key sources:
 - Zhu et al., "Diffusion Models for Reinforcement Learning: A Survey": https://arxiv.org/abs/2311.01223
 - PolyGRAD, "World Models via Policy-Guided Trajectory Diffusion": https://openreview.net/forum?id=9CcgO0LhKG
 
-## Best-of-N, Reward Hacking, And Goodhart Effects
+## Reward-Model Overoptimization And Reranking
 
-Best-of-N sampling is already known to overoptimize imperfect reward models. Gao, Schulman, and Hilton study this directly for language models. Later work on regularized Best-of-N and minimum Bayes risk reranking also makes a repair-style contribution risky unless the repair is clearly scoped.
+Reward-model overoptimization is already known: a learned reward or preference model can be exploited by selecting or optimizing strongly against it. Later work on regularized reranking and minimum Bayes risk decoding also makes repair-style novelty risky unless the repair is clearly scoped.
 
-The paper should therefore cite Best-of-N overoptimization as the parent phenomenon and ask what the world-model setting adds: continuous trajectories, physical validity, manifold distance, diversity collapse, and true-vs-proxy return gaps.
+The paper should cite overoptimization as the parent phenomenon and ask what the trajectory world-model setting adds: continuous paths, physical-validity features, manifold distance, diversity collapse, and held-out true returns.
 
 Key sources:
 
@@ -58,8 +58,7 @@ Key sources:
 The literature leaves room for a careful, narrow paper:
 
 1. Train or use a flow-matching style conditional trajectory generator.
-2. Apply Best-of-N inference with an imperfect learned value or proxy.
+2. Apply upper-tail selection with an imperfect learned value or proxy.
 3. Measure whether higher proxy score comes from better trajectories or from off-manifold score exploitation.
-4. Test a repair that penalizes candidates far from the training trajectory manifold.
-
-The repo implements exactly this small claim. It should be treated as a falsifiable pilot, not as a finished ICLR-strength empirical study.
+4. Test whether a training-manifold calibration penalty reduces the selected-tail failure.
+5. Keep claims scoped to the synthetic audit until standard control benchmarks and diffusion baselines are added.

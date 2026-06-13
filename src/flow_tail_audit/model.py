@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from torch import nn
 
-from flow_matching_bon.config import ExperimentConfig
-from flow_matching_bon.data import flatten_trajectories, unflatten_trajectories
+from flow_tail_audit.config import ExperimentConfig
+from flow_tail_audit.data import flatten_trajectories, unflatten_trajectories
 
 
 class ConditionalVectorField(nn.Module):

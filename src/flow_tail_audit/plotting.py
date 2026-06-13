@@ -23,7 +23,7 @@ def save_diagnostic_plots(frame: pd.DataFrame, output_dir: str | Path) -> dict[s
             subset = subset.sort_values("n")
             ax.plot(subset["n"], subset[column], marker="o", linewidth=1.8, label=method)
         ax.set_xscale("log", base=2)
-        ax.set_xlabel("Candidates N")
+        ax.set_xlabel("Candidate budget N")
         ax.set_ylabel(ylabel)
         ax.grid(True, alpha=0.25)
         ax.legend(frameon=False, fontsize=8)

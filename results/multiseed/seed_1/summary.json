@@ -1,0 +1,13 @@
+{
+  "calibrated_tail_ood_at_max_n": 160.47682189941406,
+  "calibrated_tail_pred_true_gap_at_max_n": 65.94107055664062,
+  "calibrated_tail_true_return_at_max_n": -39.97728729248047,
+  "final_train_loss": 0.7266483306884766,
+  "first_candidate_ood_at_max_n": 281.0111389160156,
+  "first_candidate_pred_true_gap_at_max_n": 99.43081665039062,
+  "first_candidate_true_return_at_max_n": -70.31495666503906,
+  "metrics_rows": 15.0,
+  "proxy_tail_ood_at_max_n": 345.30572509765625,
+  "proxy_tail_pred_true_gap_at_max_n": 148.83108520507812,
+  "proxy_tail_true_return_at_max_n": -100.98493194580078
+}

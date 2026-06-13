@@ -15,12 +15,12 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from flow_matching_bon.config import ExperimentConfig
-from flow_matching_bon.data import generate_contexts, make_dataset, make_rng
-from flow_matching_bon.diagnostics import evaluate_best_of_n
-from flow_matching_bon.metrics import fit_proxy_value
-from flow_matching_bon.model import sample_rectified_flow, train_rectified_flow
-from flow_matching_bon.plotting import save_diagnostic_plots
+from flow_tail_audit.config import ExperimentConfig
+from flow_tail_audit.data import generate_contexts, make_dataset, make_rng
+from flow_tail_audit.diagnostics import evaluate_tail_selection
+from flow_tail_audit.metrics import fit_proxy_value
+from flow_tail_audit.model import sample_rectified_flow, train_rectified_flow
+from flow_tail_audit.plotting import save_diagnostic_plots
 
 
 def run_experiment(
@@ -47,7 +47,7 @@ def run_experiment(
         device=config.device,
     )
 
-    diagnostics = evaluate_best_of_n(
+    diagnostics = evaluate_tail_selection(
         candidates,
         eval_contexts,
         proxy,
@@ -79,7 +79,7 @@ def run_experiment(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the synthetic Best-of-N flow-matching experiment.")
+    parser = argparse.ArgumentParser(description="Run the synthetic rectified-flow tail-audit experiment.")
     parser.add_argument("--preset", choices=["smoke", "full", "test"], default="smoke")
     parser.add_argument("--output", default="results/smoke")
     parser.add_argument("--seed", type=int, default=0)

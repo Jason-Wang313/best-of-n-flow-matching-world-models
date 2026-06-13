@@ -5,8 +5,8 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from flow_matching_bon.metrics import ProxyValueModel, mean_pairwise_distance, mode_entropy, true_return
-from flow_matching_bon.samplers import best_of_n_indices, gather_candidates, uncertainty_penalized_indices
+from flow_tail_audit.metrics import ProxyValueModel, mean_pairwise_distance, mode_entropy, true_return
+from flow_tail_audit.samplers import calibrated_tail_indices, gather_candidates, proxy_tail_indices
 
 
 @dataclass(frozen=True)
@@ -24,14 +24,14 @@ class DiagnosticResult:
         return out
 
 
-def evaluate_best_of_n(
+def evaluate_tail_selection(
     candidates: np.ndarray,
     contexts: np.ndarray,
     proxy: ProxyValueModel,
     candidate_counts: tuple[int, ...],
     penalty_weight: float,
 ) -> DiagnosticResult:
-    """Evaluate naive and repaired Best-of-N selection."""
+    """Evaluate proxy-tail and calibrated-tail trajectory selection."""
 
     rows: list[dict[str, float | int | str]] = []
     n_contexts, max_candidates, horizon, _ = candidates.shape
@@ -54,9 +54,9 @@ def evaluate_best_of_n(
         candidate_pred_mean = float(np.mean(pred))
 
         for method, idx in {
-            "random": np.zeros(n_contexts, dtype=int),
-            "bon_proxy": best_of_n_indices(pred),
-            "bon_uncertainty": uncertainty_penalized_indices(pred, ood, penalty_weight),
+            "first_candidate": np.zeros(n_contexts, dtype=int),
+            "proxy_tail": proxy_tail_indices(pred),
+            "calibrated_tail": calibrated_tail_indices(pred, ood, penalty_weight),
         }.items():
             selected = gather_candidates(cand, idx)
             selected_pred = pred[np.arange(n_contexts), idx]

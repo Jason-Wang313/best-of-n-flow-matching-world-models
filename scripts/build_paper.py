@@ -9,7 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 PAPER = ROOT / "paper"
 FINAL = PAPER / "final" / "iclr_submission.pdf"
 DOWNLOADS = Path.home() / "Downloads" / "iclr_submission_flow_matching_world_models.pdf"
+DESKTOP = Path.home() / "OneDrive" / "Desktop" / "best of n flow matching world models-v2.pdf"
 FAILURE_LOG = ROOT / "docs" / "latex_failure.txt"
+SCRATCH_EXTENSIONS = [".aux", ".log", ".out", ".toc", ".bbl", ".blg"]
 
 
 def run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -20,8 +22,12 @@ def compile_with_pdflatex() -> tuple[bool, str]:
     pdflatex = shutil.which("pdflatex")
     if pdflatex is None:
         return False, "pdflatex not found on PATH"
+    for ext in SCRATCH_EXTENSIONS:
+        scratch = PAPER / f"main{ext}"
+        if scratch.exists():
+            scratch.unlink()
     logs: list[str] = []
-    for _ in range(2):
+    for _ in range(3):
         proc = run([pdflatex, "-interaction=nonstopmode", "-halt-on-error", "main.tex"], PAPER)
         logs.append(proc.stdout)
         logs.append(proc.stderr)
@@ -44,10 +50,13 @@ def main() -> None:
     shutil.copy2(source_pdf, FINAL)
     DOWNLOADS.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source_pdf, DOWNLOADS)
+    DESKTOP.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_pdf, DESKTOP)
     if FAILURE_LOG.exists():
         FAILURE_LOG.unlink()
     print(f"wrote {FINAL}")
     print(f"wrote {DOWNLOADS}")
+    print(f"wrote {DESKTOP}")
 
 
 if __name__ == "__main__":

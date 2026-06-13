@@ -1,10 +1,10 @@
-# Best-of-N Flow-Matching World Models
+# Rectified-Flow Tail-Value Audits
 
-This repository is a first-pass research artifact for the question:
+This repository studies a narrow failure mode in rectified-flow trajectory world models:
 
-> What goes wrong when a flow-matching or rectified-flow world model is sampled many times and reranked by an imperfect value model?
+> When many generated futures are available, does the upper tail chosen by a learned proxy reflect better executable behavior, or merely proxy-seeking trajectory artifacts?
 
-The code trains a small conditional rectified-flow trajectory generator on a synthetic point-mass world, samples `N` candidate futures, and compares naive Best-of-N reranking against an uncertainty-penalized repair. The paper and docs are written in an intentionally skeptical style: the repo prioritizes runnable evidence and clear failure modes over claiming a breakthrough.
+The code trains a small conditional rectified-flow trajectory generator on a synthetic two-mode point-mass world, evaluates large candidate pools under an intentionally incomplete value proxy, and measures how the selected upper-tail futures differ from the training trajectory manifold. The project is framed as an audit harness, not a new planning algorithm.
 
 ## Quick Start
 
@@ -12,42 +12,45 @@ The code trains a small conditional rectified-flow trajectory generator on a syn
 python -m pip install -e .[dev]
 python -m pytest
 python experiments/run_synthetic.py --preset smoke --output results/smoke
+python experiments/run_multiseed.py --preset smoke --seeds 0,1,2,3,4 --output results/multiseed
+python scripts/run_claim_audit.py
 python scripts/build_paper.py
 ```
 
 The paper build writes:
 
 - `paper/final/iclr_submission.pdf`
+- `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v2.pdf`
 - `C:\Users\wangz\Downloads\iclr_submission_flow_matching_world_models.pdf`
 
 ## Repository Layout
 
-- `src/flow_matching_bon/`: synthetic task, rectified-flow model, samplers, metrics, diagnostics, and plotting.
-- `experiments/`: runnable synthetic experiments.
+- `src/flow_tail_audit/`: synthetic task, rectified-flow model, tail selectors, metrics, diagnostics, and plotting.
+- `experiments/`: single-seed and multi-seed synthetic audits.
 - `tests/`: sampler, metric, diagnostic, and reproducibility coverage.
-- `docs/`: literature map, hostile novelty review, related-work matrix, novelty decision, and final audit.
-- `paper/`: anonymous ICLR-style LaTeX source and generated final PDF.
-- `scripts/`: smoke experiment, literature matrix, and paper build helpers.
+- `docs/`: prior-work pressure tests, novelty decision, related-work matrix, and final audit.
+- `paper/`: anonymous LaTeX source, generated figures, and final PDF.
+- `scripts/`: claim audit, paper build, and literature-matrix helpers.
 
 ## Research Claim
 
-The current evidence supports a modest claim:
+The current evidence supports a scoped claim:
 
-Naive Best-of-N selection can amplify proxy-score errors in conditional rectified-flow trajectory generators by selecting candidates that are high-scoring under the proxy but far from the training trajectory manifold. A simple feature-space uncertainty penalty reduces that exploitation in the synthetic setting, but it is not yet a general solution.
+In a controlled rectified-flow trajectory generator, proxy-tail selection can increase apparent value while worsening realized return and moving selected trajectories farther from the training manifold. A feature-space calibration penalty reduces the gap and OOD distance across a five-seed smoke audit, but it is a diagnostic baseline rather than a general solution.
 
 ## Minimal Experiment
 
 The synthetic world is a 2D point mass moving from `(0, 0)` to a context-dependent goal while avoiding an obstacle. Expert trajectories use two modes around the obstacle. A conditional rectified-flow model learns to generate whole trajectories. A learned linear proxy value model is trained on limited features, so it can overrate short or off-manifold trajectories. Diagnostics measure:
 
 - true return vs. predicted return,
-- selected-candidate exploitation gap,
+- selected-tail exploitation gap,
 - candidate and selected trajectory diversity,
 - feature-space out-of-distribution distance,
-- selection bias as `N` increases.
+- selection bias as candidate budget `N` increases.
 
 ## Reproducibility
 
-Experiments are seeded and CPU-friendly. The smoke preset should finish quickly on a standard laptop. The larger preset is still intentionally small enough for iteration:
+Experiments are seeded and CPU-friendly. The five-seed smoke audit is intentionally small enough to rerun during review. The larger preset is available for a slower stress pass:
 
 ```powershell
 python experiments/run_synthetic.py --preset full --output results/full
@@ -55,4 +58,4 @@ python experiments/run_synthetic.py --preset full --output results/full
 
 ## Limitations
 
-This is not a claim that all flow-matching world models fail under Best-of-N, nor that uncertainty penalties are sufficient in high-dimensional robotic or video domains. The artifact is meant to make the failure mode concrete, testable, and easy to falsify.
+This is not evidence that all flow-matching world models fail under large candidate budgets, nor that feature-space penalties are sufficient in high-dimensional robotics or video domains. The artifact makes one tail-selection failure mode concrete, measurable, and easy to falsify.

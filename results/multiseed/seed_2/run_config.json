@@ -1,0 +1,22 @@
+{
+  "seed": 2,
+  "horizon": 18,
+  "train_size": 256,
+  "eval_contexts": 32,
+  "train_steps": 100,
+  "batch_size": 96,
+  "hidden_dim": 72,
+  "lr": 0.002,
+  "ode_steps": 10,
+  "max_candidates": 16,
+  "candidate_counts": [
+    1,
+    2,
+    4,
+    8,
+    16
+  ],
+  "penalty_weight": 0.35,
+  "proxy_noise": 0.08,
+  "device": "cpu"
+}
