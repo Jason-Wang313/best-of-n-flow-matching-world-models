@@ -14,20 +14,21 @@ python -m pytest
 python experiments/run_synthetic.py --preset smoke --output results/smoke
 python experiments/run_multiseed.py --preset smoke --seeds 0,1,2,3,4 --output results/multiseed
 python experiments/run_step_sweep.py --preset smoke --seeds 50,51,52,53,54 --output results/step_sweep
+python experiments/run_gym_control.py --preset full --seeds 70,71,72,73,74 --output results/gym_control
 python scripts/run_claim_audit.py
 python scripts/build_paper.py
 ```
 
 The paper build writes:
 
-- `paper/final/best of n flow matching world models-v3.pdf`
+- `paper/final/best of n flow matching world models-v4.pdf`
 
 Desktop publishing is intentionally separate and should happen only after the source is committed, pushed, and remote-verified.
 
 ## Repository Layout
 
 - `src/flow_tail_audit/`: synthetic task, rectified-flow model, tail selectors, metrics, diagnostics, and plotting.
-- `experiments/`: single-seed and multi-seed synthetic audits.
+- `experiments/`: single-seed and multi-seed synthetic audits plus Gymnasium classic-control stress tests.
 - `tests/`: sampler, metric, diagnostic, and reproducibility coverage.
 - `docs/`: prior-work pressure tests, novelty decision, related-work matrix, and final audit.
 - `paper/`: anonymous LaTeX source, generated figures, and final PDF.
@@ -37,7 +38,7 @@ Desktop publishing is intentionally separate and should happen only after the so
 
 The current evidence supports a scoped claim:
 
-In a controlled rectified-flow trajectory generator, proxy-tail selection can increase apparent value while worsening realized return and moving selected trajectories farther from the training manifold. A feature-space calibration penalty reduces the gap and OOD distance across a five-seed smoke audit, but it is a diagnostic baseline rather than a general solution.
+In a controlled rectified-flow trajectory generator, proxy-tail selection can increase apparent value while worsening realized return and moving selected trajectories farther from the training manifold. A feature-space calibration penalty reduces the gap and OOD distance across a five-seed synthetic audit and shows strict repair on held-out CartPole. MountainCar and Acrobot are reported as harder stress cases where calibration reduces OOD/gap but only weakly improves executed utility.
 
 ## Minimal Experiment
 
@@ -50,9 +51,13 @@ The synthetic world is a 2D point mass moving from `(0, 0)` to a context-depende
 - rectified-flow Euler-step consistency,
 - selection bias as candidate budget `N` increases.
 
+## Standard Benchmark Tier
+
+`experiments/run_gym_control.py` evaluates rectified-flow action-sequence sampling on Gymnasium `CartPole-v1`, `MountainCar-v0`, and `Acrobot-v1`. The full frozen benchmark uses seeds `70,71,72,73,74`, six contexts per task/seed, candidate budgets through `N=32`, and five selectors: first candidate, proxy tail, feature-calibrated tail, flow-residual control, and an oracle-in-pool upper bound.
+
 ## Reproducibility
 
-Experiments are seeded and CPU-friendly. The five-seed smoke audit is intentionally small enough to rerun during review. The larger preset is available for a slower stress pass:
+Experiments are seeded and CPU-friendly. The five-seed smoke audit is intentionally small enough to rerun during review. The larger synthetic preset is available for a slower stress pass:
 
 ```powershell
 python experiments/run_synthetic.py --preset full --output results/full
@@ -60,4 +65,4 @@ python experiments/run_synthetic.py --preset full --output results/full
 
 ## Limitations
 
-This is not evidence that all flow-matching world models fail under large candidate budgets, nor that feature-space penalties are sufficient in high-dimensional robotics or video domains. The artifact makes one tail-selection failure mode concrete, measurable, and easy to falsify.
+This is not evidence that all flow-matching world models fail under large candidate budgets, nor that feature-space penalties are sufficient in high-dimensional robotics or video domains. The artifact makes one tail-selection failure mode concrete, measurable, and easy to falsify, with Gymnasium stress tests used to expose both repair success and repair boundaries.

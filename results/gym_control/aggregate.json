@@ -1,0 +1,232 @@
+{
+  "benchmark_diagnostics": {
+    "Acrobot-v1": {
+      "feature_minus_proxy_gap_ci": {
+        "hi": 0.0,
+        "lo": -1.6063827514648437,
+        "mean": -0.5363441467285156,
+        "n": 5.0,
+        "std": 1.196834797363732
+      },
+      "feature_minus_proxy_ood_ci": {
+        "hi": 0.0,
+        "lo": -0.17218223412831624,
+        "mean": -0.07380362351735434,
+        "n": 5.0,
+        "std": 0.11000163205075933
+      },
+      "feature_minus_proxy_true_return_ci": {
+        "hi": 1.479924774169922,
+        "lo": -0.03972702026367188,
+        "mean": 0.48006591796875,
+        "n": 5.0,
+        "std": 1.1108435418603197
+      },
+      "feature_repair": false,
+      "flow_residual_minus_proxy_residual_ci": {
+        "hi": -0.004699109665428598,
+        "lo": -0.010407363111153244,
+        "mean": -0.007553236388290921,
+        "n": 5.0,
+        "std": 0.0038403102439877467
+      },
+      "oracle_minus_proxy_true_return_ci": {
+        "hi": 12.962399037679035,
+        "lo": 8.533466205596923,
+        "mean": 10.905860646565754,
+        "n": 5.0,
+        "std": 3.0085069548177845
+      },
+      "proxy_harm": false,
+      "proxy_minus_first_true_return_ci": {
+        "hi": 5.8574671427408855,
+        "lo": 0.18197275797526044,
+        "mean": 3.3921440124511717,
+        "n": 5.0,
+        "std": 3.5060855895382423
+      },
+      "residual_control_reduces_step_sensitivity": true
+    },
+    "CartPole-v1": {
+      "feature_minus_proxy_gap_ci": {
+        "hi": -22.532669494946802,
+        "lo": -27.632296427090964,
+        "mean": -25.248094431559245,
+        "n": 5.0,
+        "std": 3.316563039862252
+      },
+      "feature_minus_proxy_ood_ci": {
+        "hi": -5.873374176025391,
+        "lo": -7.792111253738403,
+        "mean": -6.86113056341807,
+        "n": 5.0,
+        "std": 1.2361737811655666
+      },
+      "feature_minus_proxy_true_return_ci": {
+        "hi": 12.975477631886799,
+        "lo": 6.984873453776042,
+        "mean": 9.813123067220053,
+        "n": 5.0,
+        "std": 3.8798725316999714
+      },
+      "feature_repair": true,
+      "flow_residual_minus_proxy_residual_ci": {
+        "hi": -0.003020849948128064,
+        "lo": -0.0070922242787977065,
+        "mean": -0.005364754268278678,
+        "n": 5.0,
+        "std": 0.002505785058365396
+      },
+      "oracle_minus_proxy_true_return_ci": {
+        "hi": 28.943403816223146,
+        "lo": 25.563902780214946,
+        "mean": 27.282979202270507,
+        "n": 5.0,
+        "std": 2.037974433578563
+      },
+      "proxy_harm": true,
+      "proxy_minus_first_true_return_ci": {
+        "hi": -2.6548868815104165,
+        "lo": -8.478242498238881,
+        "mean": -5.779266293843587,
+        "n": 5.0,
+        "std": 3.759959104421502
+      },
+      "residual_control_reduces_step_sensitivity": true
+    },
+    "MountainCar-v0": {
+      "feature_minus_proxy_gap_ci": {
+        "hi": 0.11206207275390626,
+        "lo": -2.03226375579834,
+        "mean": -0.9345027923583984,
+        "n": 5.0,
+        "std": 1.4145982919244324
+      },
+      "feature_minus_proxy_ood_ci": {
+        "hi": -0.18156479199727377,
+        "lo": -0.6749698003133138,
+        "mean": -0.45424113273620603,
+        "n": 5.0,
+        "std": 0.30871022338322246
+      },
+      "feature_minus_proxy_true_return_ci": {
+        "hi": 1.2572837702433268,
+        "lo": -0.6369410196940104,
+        "mean": 0.3128242492675782,
+        "n": 5.0,
+        "std": 1.2101086277352944
+      },
+      "feature_repair": false,
+      "flow_residual_minus_proxy_residual_ci": {
+        "hi": -0.0012029146930823723,
+        "lo": -0.00612905821762979,
+        "mean": -0.003618040944760044,
+        "n": 5.0,
+        "std": 0.0031886624151766887
+      },
+      "oracle_minus_proxy_true_return_ci": {
+        "hi": 10.236406834920247,
+        "lo": 6.624856567382812,
+        "mean": 8.349090067545573,
+        "n": 5.0,
+        "std": 2.4242164376365487
+      },
+      "proxy_harm": false,
+      "proxy_minus_first_true_return_ci": {
+        "hi": 1.6353153228759765,
+        "lo": -0.10739402770996094,
+        "mean": 0.6766030629475912,
+        "n": 5.0,
+        "std": 1.099402387595592
+      },
+      "residual_control_reduces_step_sensitivity": true
+    }
+  },
+  "benchmarks": [
+    "CartPole-v1",
+    "MountainCar-v0",
+    "Acrobot-v1"
+  ],
+  "configs": {
+    "70": {
+      "eval_contexts": 6,
+      "feature_penalty_by_benchmark": {
+        "Acrobot-v1": 1.0,
+        "CartPole-v1": 6.0,
+        "MountainCar-v0": 4.0
+      },
+      "residual_penalty": 2.5,
+      "train_per_task": 56,
+      "train_steps": 120
+    },
+    "71": {
+      "eval_contexts": 6,
+      "feature_penalty_by_benchmark": {
+        "Acrobot-v1": 1.0,
+        "CartPole-v1": 6.0,
+        "MountainCar-v0": 4.0
+      },
+      "residual_penalty": 2.5,
+      "train_per_task": 56,
+      "train_steps": 120
+    },
+    "72": {
+      "eval_contexts": 6,
+      "feature_penalty_by_benchmark": {
+        "Acrobot-v1": 1.0,
+        "CartPole-v1": 6.0,
+        "MountainCar-v0": 4.0
+      },
+      "residual_penalty": 2.5,
+      "train_per_task": 56,
+      "train_steps": 120
+    },
+    "73": {
+      "eval_contexts": 6,
+      "feature_penalty_by_benchmark": {
+        "Acrobot-v1": 1.0,
+        "CartPole-v1": 6.0,
+        "MountainCar-v0": 4.0
+      },
+      "residual_penalty": 2.5,
+      "train_per_task": 56,
+      "train_steps": 120
+    },
+    "74": {
+      "eval_contexts": 6,
+      "feature_penalty_by_benchmark": {
+        "Acrobot-v1": 1.0,
+        "CartPole-v1": 6.0,
+        "MountainCar-v0": 4.0
+      },
+      "residual_penalty": 2.5,
+      "train_per_task": 56,
+      "train_steps": 120
+    }
+  },
+  "experiment": "gym_control_rectified_flow_action_benchmarks",
+  "key_result": {
+    "curve_rows": 2700,
+    "effect_rows": 15,
+    "feature_repair_benchmark_count": 1,
+    "proxy_harm_benchmark_count": 1,
+    "residual_control_benchmark_count": 3
+  },
+  "max_candidates": 32,
+  "n_values": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "preset": "full",
+  "seeds": [
+    70,
+    71,
+    72,
+    73,
+    74
+  ]
+}

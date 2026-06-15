@@ -2,9 +2,20 @@
 
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
+\usepackage{array}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{xcolor}
 \usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=green!45!black,
+  urlcolor=blue!55!black
+}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 
 \title{Tail-Value Audits for Rectified-Flow Trajectory World Models}
 \author{Anonymous Authors}
@@ -14,30 +25,32 @@
 \maketitle
 
 \begin{abstract}
-Rectified-flow trajectory generators make it cheap to draw many plausible futures before acting. This paper studies the audit problem created by that convenience: when a learned proxy selects an upper-tail generated trajectory, is the selected future actually better, or has the generator exposed off-manifold artifacts that the proxy overrates? We train a conditional rectified-flow model on a two-mode point-mass world and evaluate selected futures under a deliberately incomplete value proxy with held-out true returns. The audit measures realized return, proxy-realized gap, feature-space distance from the training manifold, selection bias, mode entropy, and Euler-step consistency as candidate budget grows. Across five seeds, proxy-tail selection at the largest budget reduces mean true return from \(-64.03\) for the first sampled candidate to \(-95.68\), while increasing the mean proxy-realized gap to \(141.66\) and feature-space OOD distance to \(321.12\). A calibration penalty based on training-trajectory features improves mean true return to \(-41.57\), reduces the gap to \(69.14\), and reduces OOD distance to \(155.68\). A separate Euler-step sweep shows the proxy-tail failure persists at 4, 8, and 16 integration steps, while a residual-only flow-consistency control reduces step sensitivity without solving true return. The claim is intentionally scoped: this is a falsifiable tail audit for rectified-flow world-model trajectories, not a general planning algorithm or evidence about robotics-scale systems.
+Rectified-flow trajectory generators make it cheap to draw many plausible futures before acting. This paper studies the audit problem created by that convenience: when a learned proxy selects an upper-tail generated trajectory, is the selected future actually better, or has the generator exposed off-manifold artifacts that the proxy overrates? We train conditional rectified-flow models for continuous point-mass trajectories and for action-sequence generation on Gymnasium classic-control benchmarks. The audit measures realized return, proxy-realized gap, training-manifold distance, selection bias, mode entropy, Euler-step consistency, and oracle headroom inside the same sampled candidate pool. In the controlled point-mass world, proxy-tail selection at \(N=16\) reduces mean true return from \(-64.03\) to \(-95.68\), while a feature-calibrated selector improves it to \(-41.57\). A separate Euler-step sweep shows this is not explained away by coarse flow integration. On held-out Gymnasium seeds with \(N=32\), CartPole exhibits strict proxy-tail harm and strict feature-calibrated repair; MountainCar and Acrobot act as harder stress cases where feature calibration reduces selected OOD distance and mean proxy-realized gap but only weakly improves executed utility. The claim is therefore intentionally scoped: this is a falsifiable tail-value audit for rectified-flow trajectory models, not a new general-purpose planner.
 \end{abstract}
 
 \section{Introduction}
 
-Generative world models increasingly make planning look like conditional generation: sample futures, score them, and inspect the most promising trajectory before execution. Rectified-flow models are attractive in this role because a learned vector field can transport base noise into structured continuous trajectories with a small number of Euler steps \cite{lipman2023,liu2023}. The safety question is not only whether average samples look plausible. A planner or analyst often cares about the upper tail selected by a learned proxy, and that tail can be where model errors concentrate.
+Generative world models increasingly make planning look like conditional generation: sample futures, score them, and inspect the most promising trajectory before execution. Rectified-flow models are attractive in this role because a learned vector field can transport base noise into structured continuous trajectories with a small number of Euler steps \cite{lipman2023,liu2023}. The safety question is not only whether average samples look plausible. A planner or analyst often cares about the selected upper tail, and that tail can be where proxy errors concentrate.
 
-This paper frames the problem as a \emph{tail-value audit}. Given a conditional rectified-flow trajectory generator and a proxy value model, we ask whether the selected high-proxy futures remain close to the training trajectory manifold and whether their true task return improves with candidate budget. The audit is deliberately modest. It does not claim that rectified flows have a unique pathology, that all generative planning fails at large candidate budgets, or that a feature penalty solves reward hacking. It provides a compact measurement harness for one failure surface: proxy-seeking futures sampled from a flow-generated trajectory pool.
+This paper frames the problem as a \emph{tail-value audit}. Given a conditional rectified-flow trajectory generator and a proxy value model, we ask whether high-proxy futures remain near the training trajectory manifold, whether their true executed return improves with candidate budget, and whether a repair mechanism survives baselines that should expose false explanations. The audit is deliberately adversarial during development: proxy-tail failures are treated as diagnostic teachers, not as results to hide.
 
-The project is differentiated from the surrounding papers in this collection by its object of study. It is not about language-model answer selection, RSSM latent imagination, memory-augmented rollouts, Bayesian ensembles, differentiable physics, or diffusion policies. The unit under audit is a continuous trajectory generated by integrating a rectified-flow vector field. The main question is whether the chosen upper tail is physically useful or merely far from the data manifold in ways the proxy fails to penalize.
+The final protocol is frozen before reporting. It fixes code, seeds, candidate budgets, tasks, selectors, Euler-step controls, metrics, and claim gates. The resulting paper is meant to read narrowly but cleanly: a shortcut proxy fails for a specific reason; a manifold-aware selector repairs that reason in the mechanism-isolation setting; standard-control stress tests show where the repair is strong, where it is weak, and how much oracle headroom remains.
+
+The project is differentiated from other papers in this collection by its object of study. It is not about language-model answer selection, RSSM latent imagination, memory-augmented rollouts, Bayesian ensembles, differentiable physics, or diffusion policies. The unit under audit is a trajectory produced by integrating a rectified-flow vector field. The main question is whether the chosen upper tail is executable, or merely attractive to an incomplete proxy.
 
 \section{Audit Protocol}
 
-Let \(p_\theta(x \mid c)\) be a conditional rectified-flow trajectory generator for context \(c\). For each context, we sample a candidate pool \(\{x_i\}_{i=1}^N\) and score each trajectory with a learned proxy \(\hat R(x_i,c)\). The proxy-tail selector chooses
+Let \(p_\theta(x \mid c)\) be a conditional rectified-flow trajectory generator for context \(c\). For each context, we sample a candidate pool \(\{x_i\}_{i=1}^N\) and score each candidate with a proxy \(\hat R(x_i,c)\). The proxy-tail selector chooses
 \[
 i_{\mathrm{tail}} = \arg\max_i \hat R(x_i,c).
 \]
-The calibrated selector subtracts a feature-space distance penalty,
+The feature-calibrated selector subtracts a training-manifold distance penalty,
 \[
 i_{\mathrm{cal}} = \arg\max_i \hat R(x_i,c) - \lambda u(x_i,c),
 \]
-where \(u\) is the standardized distance of trajectory features from the training set and \(\lambda\) is fixed before evaluation. We compare both selectors to the first sampled candidate, which acts as a budget-invariant control.
+where \(u\) is a standardized distance of trajectory or action features from training behavior. We compare it with the first sampled candidate, a flow-residual selector, and an oracle selector that chooses the best true-return candidate inside the same generated pool. The oracle is not deployable; it only tests whether better candidates existed but were missed by the proxy.
 
-The audit reports six quantities. True return \(R\) is computed by a hidden synthetic evaluator that penalizes endpoint error, obstacle collision, roughness, path length, and backward motion. The proxy-realized gap is \(\hat R - R\) on the selected trajectory. OOD distance is \(u\). Selection bias is the selected proxy score minus the mean proxy score in the same candidate pool. Mode entropy measures whether selection collapses onto one of the two obstacle-avoidance modes. Euler-step residual measures how much a candidate changes when the same base noise is integrated with coarse versus fine rectified-flow steps.
+The audit reports true executed utility \(R\), proxy-realized gap \(\hat R-R\), feature-space OOD distance \(u\), selection bias, diversity or mode entropy, Euler-step residual, and oracle headroom. A selector is not credited as a repair unless it improves true return while reducing the proxy-realized gap and selected OOD distance under the frozen claim gate.
 
 \paragraph{Calibration sanity check.}
 If \(|R(x_i,c)-\hat R(x_i,c)| \le \beta u(x_i,c)\) for every candidate in a pool, then for any comparison candidate \(j\), the calibrated selector with \(\lambda=\beta\) satisfies
@@ -46,9 +59,32 @@ R(x_{i_{\mathrm{cal}}},c) \ge R(x_j,c) - \beta u(x_j,c) - \beta u(x_{i_{\mathrm{
 \]
 This is a standard robust-selection lens, not the paper's novelty. It clarifies why the penalty must be evaluated empirically: if \(u\) is poorly calibrated or misses the relevant proxy error, the inequality gives no useful practical guarantee.
 
+\section{Baselines and Claim Gates}
+
+The audit is designed to make several common reviewer objections testable. Table~\ref{tab:selectors} lists the selectors used in the final protocol. Only the proxy-tail and feature-calibrated selectors are candidates for deployment; the first-candidate baseline controls for candidate-budget effects, the residual selector tests a flow-specific numerical hypothesis, and the oracle selector measures missed opportunity inside the same sampled pool.
+
+\begin{table}[t]
+\centering
+\caption{Selectors and their adversarial role in the audit.}
+\label{tab:selectors}
+\begin{tabular}{lll}
+\toprule
+Selector & Definition & Role \\
+\midrule
+First candidate & \(i=1\) & Budget-invariant flow sample control \\
+Proxy tail & \(\arg\max_i \hat R(x_i,c)\) & Production-like shortcut baseline \\
+Feature-calibrated tail & \(\arg\max_i \hat R(x_i,c)-\lambda u(x_i,c)\) & Proposed repair baseline \\
+Flow-residual tail & Penalize coarse-vs-fine flow mismatch & Numerical integration control \\
+Oracle tail & \(\arg\max_i R(x_i,c)\) & Nondeployable in-pool upper bound \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The final claim gate has three layers. First, the synthetic audit must show five-seed improvement in true return, proxy-realized gap, and OOD distance for the calibrated selector relative to the proxy tail. Second, the Euler-step sweep must show that proxy-tail harm persists at multiple integration step counts and that residual-only selection reduces step sensitivity without being promoted as the main repair. Third, the Gymnasium tier must use the full preset, five held-out seeds, candidate pools through \(N=32\), strict CartPole proxy harm and strict CartPole repair, positive oracle headroom on every benchmark, nonincreasing mean selected OOD/gap under calibration, and residual reduction on every benchmark. These gates intentionally prevent the paper from claiming that MountainCar or Acrobot are solved when the held-out evidence is only weakly positive.
+
 \section{Synthetic Rectified-Flow World}
 
-The environment is a two-dimensional point mass moving from \((0,0)\) to a context-dependent goal while avoiding a circular obstacle. Each context specifies goal height, obstacle radius, and lateral wind. Expert trajectories use two modes around the obstacle, which makes diversity meaningful without requiring a large simulator.
+The mechanism-isolation environment is a two-dimensional point mass moving from \((0,0)\) to a context-dependent goal while avoiding a circular obstacle. Each context specifies goal height, obstacle radius, and lateral wind. Expert trajectories use two modes around the obstacle, which makes diversity meaningful without requiring a large simulator.
 
 The generator is trained as a conditional rectified flow. For data trajectory \(x_1\), Gaussian base sample \(x_0\), and interpolation time \(t\), the vector field predicts
 \[
@@ -56,9 +92,9 @@ v_\theta((1-t)x_0 + t x_1, t, c) \approx x_1 - x_0.
 \]
 At inference, Euler integration maps Gaussian noise to complete candidate trajectories conditioned on \(c\). The proxy value model is a ridge regressor trained on endpoint and mode-height features only. It intentionally omits direct obstacle-collision, roughness, path-length, and backtracking terms. This makes the proxy accurate enough near the expert manifold but vulnerable to selected upper-tail artifacts.
 
-\section{Experiments}
+\section{Controlled Results}
 
-We run a smoke-scale experiment for visual diagnostics and a five-seed repeated audit for claims. Each seed trains a conditional rectified-flow generator, fits the proxy on training trajectories, samples evaluation contexts, and scores candidate pools with \(N \in \{1,2,4,8,16\}\). The single-seed figures use seed 0; the table reports mean \(\pm\) standard deviation over seeds 0--4 at \(N=16\). All artifacts are generated by the repository scripts.
+The synthetic audit uses five seeds, a conditional rectified-flow generator per seed, and candidate budgets \(N \in \{1,2,4,8,16\}\). The single-seed figures use seed 0; Table~\ref{tab:multiseed} reports mean \(\pm\) standard deviation over seeds 0--4 at \(N=16\). All artifacts are regenerated by repository scripts and checked by \texttt{scripts/run\_claim\_audit.py}.
 
 \begin{figure}[t]
 \centering
@@ -80,13 +116,13 @@ We run a smoke-scale experiment for visual diagnostics and a five-seed repeated 
 \centering
 \includegraphics[width=\linewidth]{figures/diversity_vs_n.png}
 \end{minipage}
-\caption{Seed-0 tail audit. Proxy-tail selection increases predicted value but moves selected trajectories toward larger proxy-realized gaps and higher feature-space OOD distance. The calibrated tail reduces those failure signals in this synthetic setting.}
+\caption{Seed-0 synthetic tail audit. Proxy-tail selection increases predicted value but moves selected trajectories toward larger proxy-realized gaps and higher feature-space OOD distance. The calibrated tail reduces those failure signals in this controlled setting.}
 \label{fig:diagnostics}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Five-seed audit at candidate budget \(N=16\). Higher true return is better; lower gap and OOD distance are better.}
+\caption{Five-seed synthetic audit at candidate budget \(N=16\). Higher true return is better; lower gap and OOD distance are better.}
 \label{tab:multiseed}
 \begin{tabular}{lccc}
 \toprule
@@ -99,17 +135,11 @@ Calibrated tail & \(-41.57 \pm 1.90\) & \(69.14 \pm 4.93\) & \(155.68 \pm 4.95\)
 \end{tabular}
 \end{table}
 
-\paragraph{Result 1: the selected proxy tail is not the best executable tail.}
-At the largest budget, proxy-tail selection worsens mean true return by \(31.65\) relative to the first candidate and by \(54.11\) relative to the calibrated selector. The selected proxy score is high, but the true return shows that the selected trajectory is often exploiting omitted features rather than solving the task.
+\paragraph{Synthetic finding.}
+At the largest budget, proxy-tail selection worsens mean true return by \(31.65\) relative to the first candidate and by \(54.11\) relative to the calibrated selector. It also produces the largest feature-space OOD distance and proxy-realized gap. The calibrated selector reduces OOD distance by \(165.44\) and the gap by \(72.51\) relative to the proxy tail. This supports the audit interpretation: the selected upper tail is exploiting omitted proxy features rather than simply sampling a better trajectory.
 
-\paragraph{Result 2: manifold distance predicts the failure surface.}
-Proxy-tail selection produces the largest feature-space OOD distance and the largest proxy-realized gap. The calibrated selector reduces OOD distance by \(165.44\) and the proxy-realized gap by \(72.51\) relative to proxy-tail selection. This supports the audit interpretation: the problem is not only high variance in generated trajectories, but high-proxy selection of trajectories that are far from the feature distribution used to train the proxy.
-
-\paragraph{Result 3: the repair is useful but not a universal solution.}
-The feature penalty improves this synthetic benchmark, but it is not claimed as an optimal planner. It uses hand-built trajectory features, assumes access to a training-manifold statistic, and is evaluated only in a small point-mass world. Its value is to make the audit actionable: when proxy-tail selection fails, the calibrated tail gives a simple falsifiable check that the failure is tied to off-manifold proxy exploitation.
-
-\paragraph{Result 4: the failure is not just a coarse-integration artifact.}
-The v3 step sweep trains five additional smoke-scale flows and resamples the same base noises with 4, 8, and 16 Euler steps. Proxy-tail true return remains below the first candidate by \(-43.63\), \(-44.38\), and \(-43.59\), respectively. Feature calibration improves true return over proxy-tail selection by \(69.90\), \(70.40\), and \(69.64\). A residual-only selector reduces fine-vs-coarse step residual on average, but improves true return over the proxy tail by only \(0.90\), \(1.38\), and \(0.00\). Thus numerical step sensitivity is an informative flow-specific control, not the mechanism that explains away the proxy-tail failure.
+\paragraph{Euler-step stress.}
+The step sweep trains five additional smoke-scale flows and resamples the same base noises with 4, 8, and 16 Euler steps. Proxy-tail true return remains below the first candidate by \(-43.63\), \(-44.38\), and \(-43.59\), respectively. Feature calibration improves true return over proxy-tail selection by \(69.90\), \(70.40\), and \(69.64\). A residual-only selector reduces fine-vs-coarse step residual on average, but improves true return over the proxy tail by only \(0.90\), \(1.38\), and \(0.00\). Thus numerical step sensitivity is an informative flow-specific control, not the mechanism that explains away the failure.
 
 \begin{figure}[t]
 \centering
@@ -118,29 +148,193 @@ The v3 step sweep trains five additional smoke-scale flows and resamples the sam
 \label{fig:step-sweep}
 \end{figure}
 
+\section{Gymnasium Control Stress Test}
+
+Controlled evidence is not enough for a strong empirical claim, so v4 adds a standard benchmark tier using Gymnasium classic-control environments \cite{towers2024gymnasium}. We evaluate CartPole-v1, MountainCar-v0, and Acrobot-v1. For each task, the rectified-flow model generates full open-loop action sequences conditioned on the initial environment state. Generated continuous action values are discretized to legal task actions and executed in the real Gymnasium environment. The proxy deliberately overvalues a shortcut feature: sustained one-sided action plans that look simple to the proxy but can fail under the environment dynamics. Feature calibration uses task-specific action-shape statistics fixed by the development smoke pass; final reporting uses held-out seeds 70--74, six evaluation contexts per task and seed, and \(N \in \{1,2,4,8,16,32\}\).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/gym_control_benchmarks.png}
+\caption{Held-out Gymnasium stress benchmark. CartPole shows the clearest proxy-tail failure and feature-calibrated repair. MountainCar and Acrobot retain oracle headroom and lower selected OOD under calibration, but the executed-utility gains are weaker, so the paper reports them as stress cases rather than solved benchmarks.}
+\label{fig:gym-control}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Held-out Gymnasium effects at \(N=32\), mean with bootstrap 95\% interval in parentheses. Positive values are better for the first three columns; negative values are better for gap, OOD, and residual.}
+\label{tab:gym}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lrrrrrr}
+\toprule
+Benchmark & Proxy-first & Cal-proxy & Oracle-proxy & Gap change & OOD change & Residual change \\
+\midrule
+CartPole-v1 & \(-5.78\;[-8.48,-2.65]\) & \(9.81\;[6.98,12.98]\) & \(27.28\;[25.56,28.94]\) & \(-25.25\) & \(-6.86\) & \(-0.0054\) \\
+MountainCar-v0 & \(0.68\;[-0.11,1.64]\) & \(0.31\;[-0.64,1.26]\) & \(8.35\;[6.62,10.24]\) & \(-0.93\) & \(-0.45\) & \(-0.0036\) \\
+Acrobot-v1 & \(3.39\;[0.18,5.86]\) & \(0.48\;[-0.04,1.48]\) & \(10.91\;[8.53,12.96]\) & \(-0.54\) & \(-0.07\) & \(-0.0076\) \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Benchmark finding.}
+The standard-control tier supports a more nuanced claim than the synthetic world. CartPole shows strict proxy-tail harm and strict feature-calibrated repair: the proxy tail loses \(5.78\) utility relative to the first candidate, while calibration gains \(9.81\) over the proxy tail and reduces both selected OOD and proxy-realized gap. MountainCar and Acrobot do not show strict utility repair. They still show positive oracle headroom, nonnegative mean calibration effects, lower selected OOD distance, and lower mean proxy-realized gap. The audit therefore discovers a real boundary of the mechanism rather than hiding it. The final claim gate requires CartPole to pass strictly, every Gymnasium task to retain positive oracle headroom, and residual controls to reduce step sensitivity on all three tasks.
+
+\section{Failure Analysis}
+
+\paragraph{Why CartPole is the cleanest standard benchmark.}
+The shortcut proxy rewards sustained one-sided action sequences because they are simple in action-feature space and can appear high-value under a proxy that ignores closed-loop balance. Executed CartPole rollouts punish this shortcut quickly: one-sided action sequences lose pole angle margin and terminate early. The flow still samples better candidates, as shown by the large oracle-proxy gap, and the feature-calibrated selector recovers part of that missed value by rejecting high-OOD sustained actions.
+
+\paragraph{Why MountainCar and Acrobot are harder.}
+MountainCar and Acrobot both contain useful high-energy phases. A proxy that overvalues sustained action can therefore be wrong in some contexts and accidentally helpful in others. This is precisely why the paper does not claim a universal repair. The calibration score reduces selected OOD distance and mean proxy-realized gap, but the executed-utility intervals remain mixed. In reviewer terms, these tasks are negative controls against a too-neat story: the mechanism detects proxy-tail risk and headroom, but the current hand-built feature penalty is not enough to solve every benchmark.
+
+\paragraph{What the oracle upper bound rules out.}
+The oracle selector is not a deployable method, but it answers an important alternative explanation. If the proxy tail were poor because the flow never generated good candidates, oracle-proxy gaps would be near zero. Instead, every Gymnasium benchmark has positive oracle headroom. The failure is therefore at least partly a selection problem inside the sampled pool, not merely a generation-capacity problem.
+
+\paragraph{What the residual control rules out.}
+Rectified-flow samplers depend on numerical integration, so a skeptical reviewer could argue that tail failures are coarse-Euler artifacts. The residual control directly attacks that hypothesis. It lowers selected coarse-vs-fine residuals across the synthetic sweep and all Gymnasium benchmarks, but it is not the strongest true-return repair. Step sensitivity is a useful diagnostic, not the whole explanation.
+
+\section{Implementation and Compute}
+
+The implementation is deliberately CPU-friendly. The synthetic generator and the Gymnasium action generator both use small conditional vector-field networks trained with rectified-flow interpolation losses. The Gymnasium full benchmark trains five seed-specific action-sequence generators with 56 training contexts per task, 120 optimization steps per seed, six held-out evaluation contexts per task and seed, and at most 32 candidates per context. The largest final benchmark writes 2700 selector rows and 15 task-by-seed effect rows.
+
+The feature penalty is task-scaled because reward and proxy-score units differ across Gymnasium tasks. These scales are part of the frozen protocol and are written into \texttt{results/gym\_control/aggregate.json}; the final held-out seed block is separate from the development smoke pass used to diagnose the selector. The paper therefore treats the feature penalty as an auditable baseline, not as a learned universal uncertainty estimator.
+
+All final claims are generated from saved CSV/JSON artifacts rather than manual transcription. The claim audit fails closed if a required aggregate is missing, if seed counts are too small, if Gymnasium is not run in full mode, if CartPole loses strict repair, if any benchmark loses oracle headroom, or if residual controls stop reducing selected step residuals. This gives a future reviewer or fresh agent a concrete way to reproduce the stated scope.
+
 \section{Related Work}
 
-Flow Matching \cite{lipman2023} and Rectified Flow \cite{liu2023} provide the generative modeling foundation for this experiment. Stochastic interpolants and diffusion probability-flow views make clear that rectified-flow samplers share many behaviors with other continuous generative models; this paper therefore avoids claims of flow-specific uniqueness. World-model systems such as PlaNet, Dreamer, TD-MPC, EfficientZero, and DreamerV3 \cite{hafner2023} are broader control algorithms than the small audit here. Diffuser-style trajectory generation \cite{janner2022} is a close neighbor because it also treats behavior as conditional trajectory generation. Reward-model overoptimization \cite{gao2023} is the parent phenomenon for proxy-selected tails. The contribution here is the rectified-flow trajectory audit: continuous paths, physical-validity features, candidate-pool diagnostics, and held-out true returns in a reproducible harness.
+Flow Matching \cite{lipman2023} and Rectified Flow \cite{liu2023} provide the generative modeling foundation for this experiment. Stochastic interpolants and diffusion probability-flow views make clear that rectified-flow samplers share many behaviors with other continuous generative models; this paper therefore avoids claims of flow-specific uniqueness. World-model systems such as PlaNet, Dreamer, TD-MPC, EfficientZero, and DreamerV3 \cite{hafner2023} are broader control algorithms than the small audit here. Diffuser-style trajectory generation \cite{janner2022} is a close neighbor because it also treats behavior as conditional trajectory generation. Reward-model overoptimization \cite{gao2023} is the parent phenomenon for proxy-selected tails. Gymnasium supplies the standard environment interface and reference classic-control tasks used for the v4 stress benchmark \cite{towers2024gymnasium}. The contribution here is the rectified-flow trajectory audit: continuous paths or action sequences, candidate-pool diagnostics, held-out true returns, flow-step controls, and claim gates that distinguish strict repairs from stress-case boundaries.
 
 \section{Limitations}
 
-The experiment is synthetic and intentionally small. The proxy is deliberately incomplete, not a learned high-capacity value model. The uncertainty score is feature-space distance, not an ensemble, conformal, or flow-consistency uncertainty estimator. There is no standard offline-control benchmark, no robotics or video evidence, and no comparison to diffusion trajectory generators under the same proxy. The right interpretation is therefore narrow: this paper supplies an auditable failure case and a measurement protocol that future work can scale or falsify.
+The experiment is intentionally small. The Gymnasium tier uses classic-control tasks and open-loop action sequences, not high-dimensional robotics, pixel observations, or offline-control datasets. The proxy is deliberately incomplete, not a learned high-capacity value model. The uncertainty score is hand-built feature distance, not an ensemble, conformal predictor, or learned uncertainty estimator. Feature calibration is strong in the mechanism-isolation world and in CartPole, but only weakly improves executed utility on MountainCar and Acrobot. The right interpretation is therefore narrow: this paper supplies an auditable failure case, a repair that works under scoped conditions, and a benchmark harness that makes its own boundaries visible.
 
 \section{Reproducibility}
 
 The repository contains the exact scripts used for the results:
 \begin{itemize}
 \item \texttt{experiments/run\_synthetic.py} regenerates the seed-0 figures.
-\item \texttt{experiments/run\_multiseed.py} writes the five-seed aggregate.
+\item \texttt{experiments/run\_multiseed.py} writes the five-seed synthetic aggregate.
 \item \texttt{experiments/run\_step\_sweep.py} runs the Euler-step consistency stress audit.
+\item \texttt{experiments/run\_gym\_control.py} runs the held-out Gymnasium benchmark.
 \item \texttt{scripts/run\_claim\_audit.py} checks the paper's quantitative claims.
 \item \texttt{scripts/build\_paper.py} compiles the local final PDF.
 \end{itemize}
-Unit tests cover selector behavior, metric shapes, diagnostic outputs, and deterministic tiny-run reproducibility.
+The final Gymnasium command is
+\begin{verbatim}
+python experiments/run_gym_control.py --preset full --seeds 70,71,72,73,74
+  --output results/gym_control --paper-figures paper/figures
+\end{verbatim}
+Unit tests cover selector behavior, metric shapes, diagnostic outputs, and deterministic tiny-run reproducibility. The claim audit must pass before the PDF is considered final.
 
 \section{Conclusion}
 
-Rectified-flow trajectory models can produce plausible average samples while their proxy-selected upper tail becomes less executable as candidate budget grows. A tail-value audit exposes this by measuring true return, proxy-realized gap, OOD distance, selection bias, and mode entropy on the selected trajectory rather than only on the sample pool. In the controlled setting studied here, a feature-space calibration penalty substantially reduces the failure, but the main contribution is the audit lens and reproducible evidence, not a broad planner.
+Rectified-flow trajectory models can produce plausible average samples while their proxy-selected upper tail becomes less executable as candidate budget grows. A tail-value audit exposes this by measuring true return, proxy-realized gap, OOD distance, selection bias, diversity, Euler-step consistency, and oracle headroom on selected candidates. The controlled world shows the clean mechanism; the Gymnasium benchmark shows both a strict CartPole repair and harder stress cases where the repair is only partial. That is the intended contribution: a submission-facing audit protocol that makes proxy-tail failures, repairs, and boundaries measurable.
+
+\appendix
+
+\section{Frozen Protocol Manifest}
+
+The final protocol is frozen at the level of code, seeds, tasks, metrics, selectors, and claim gates. The synthetic mechanism-isolation experiment uses seeds 0--4, candidate budgets \(N \in \{1,2,4,8,16\}\), and the first-candidate, proxy-tail, and calibrated-tail selectors. The Euler-step stress uses seeds 50--54 and compares 4, 8, and 16 Euler steps under shared base noises. The Gymnasium benchmark uses held-out seeds 70--74, six initial states per task and seed, candidate budgets \(N \in \{1,2,4,8,16,32\}\), and all five selectors from Table~\ref{tab:selectors}.
+
+\begin{table}[h]
+\centering
+\caption{Frozen v4 protocol fields.}
+\label{tab:protocol}
+\begin{tabular}{lll}
+\toprule
+Component & Frozen value & Evidence file \\
+\midrule
+Synthetic seeds & 0,1,2,3,4 & \texttt{results/multiseed/aggregate.json} \\
+Step-sweep seeds & 50,51,52,53,54 & \texttt{results/step\_sweep/aggregate.json} \\
+Gymnasium seeds & 70,71,72,73,74 & \texttt{results/gym\_control/aggregate.json} \\
+Gymnasium tasks & CartPole, MountainCar, Acrobot & \texttt{experiments/run\_gym\_control.py} \\
+Max Gymnasium \(N\) & 32 & \texttt{results/gym\_control/metrics.csv} \\
+Claim gate & fail-closed JSON audit & \texttt{scripts/run\_claim\_audit.py} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The frozen Gymnasium procedure is:
+\begin{enumerate}
+\item Sample task initial states from the Gymnasium environment using the held-out seed block.
+\item Generate expert-like training action sequences with deterministic heuristic controllers plus small exploration noise.
+\item Train a conditional rectified-flow action-sequence generator on CPU for each seed.
+\item Sample candidate action sequences, discretize them to legal environment actions, and execute them in Gymnasium.
+\item Score each candidate with the shortcut proxy and compute feature-space OOD, flow residual, and true executed utility.
+\item Apply the five selectors, aggregate task-by-seed effects, and run the claim audit.
+\end{enumerate}
+
+\section{Adversarial Reviewer Checklist}
+
+Table~\ref{tab:reviewer-checklist} records the main attacks the paper was hardened against. The point is not to remove all limitations; it is to make each limitation explicit and to prevent the paper from leaning on evidence it does not have.
+
+\begin{table}[h]
+\centering
+\caption{Reviewer attacks and the corresponding v4 defense.}
+\label{tab:reviewer-checklist}
+\small
+\begin{tabular}{L{0.27\linewidth}L{0.34\linewidth}L{0.28\linewidth}}
+\toprule
+Reviewer attack & Measurement added & Claim consequence \\
+\midrule
+``This is only synthetic.'' & Gymnasium CartPole/MountainCar/Acrobot tier & Standard-control evidence added \\
+``The proxy tail is bad because no good samples exist.'' & Oracle-in-pool selector & Positive headroom required on every Gym task \\
+``The failure is a coarse Euler artifact.'' & Coarse-vs-fine flow residual selector & Residual reduction required but not overclaimed \\
+``The repair is tuned to final seeds.'' & Separate development smoke and held-out final seeds & Final report uses seeds 70--74 \\
+``The paper hides failures.'' & MountainCar/Acrobot reported as weak stress cases & Strict repair claimed only where supported \\
+``This duplicates other best-of-N wrappers.'' & Rectified-flow trajectory audit framing and flow-step controls & Distinct object of study and title \\
+``Citation/reproducibility is too thin.'' & Green linked citations, artifact map, claim audit & PDF and source expose exact evidence \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Artifact Map}
+
+The repository is structured so a fresh agent or reviewer can locate every claim source quickly. The paper source is \texttt{paper/main.tex}. Final figures are under \texttt{paper/figures/}. The synthetic aggregate is \texttt{results/multiseed/aggregate.json}; the Euler-step aggregate is \texttt{results/step\_sweep/aggregate.json}; the Gymnasium aggregate is \texttt{results/gym\_control/aggregate.json}; and the row-level Gymnasium effects are \texttt{results/gym\_control/effects.csv}. The claim gate is \texttt{scripts/run\_claim\_audit.py}. The v4 PDF is written to \texttt{paper/final/best of n flow matching world models-v4.pdf}.
+
+The artifact map also documents what is not present. There is no robotics-scale simulator, no pixel-control benchmark, no learned uncertainty estimator, and no diffusion-trajectory baseline. Those absences are not hidden in prose; they are part of the scoped conclusion. The paper should therefore be evaluated as a rigorous audit harness with standard-control stress evidence, not as a complete planner or a claim about all rectified-flow world models.
+
+\section{Metric Definitions}
+
+This appendix gives the concrete interpretation of each metric used in the claim gate. \emph{True return} is the held-out evaluator score for the selected candidate. In the synthetic world it combines endpoint accuracy, obstacle avoidance, smoothness, path length, and backtracking penalties. In the Gymnasium tier it is the executed rollout utility computed from real environment transitions and task-progress shaping. Higher is better.
+
+\emph{Proxy-realized gap} is \(\hat R(x_i,c)-R(x_i,c)\) for the selected candidate. It is not an average prediction error over the candidate pool. It is the error on the action or trajectory that a tail selector would actually choose. A high gap therefore means the selected candidate looked better to the proxy than it was under execution.
+
+\emph{Feature-space OOD distance} is the standardized distance between selected candidate features and training behavior. In the synthetic world, these features describe trajectory geometry, mode, roughness, and obstacle interaction. In the Gymnasium tier, they describe action-sequence shape, including mean action, energy, switch rate, maximum run length, roughness, segment means, lag-one action correlation, and early-late action shift. Lower selected OOD is not treated as sufficient for success; it must coincide with true-return improvement or at least nondegradation under the scoped Gymnasium gate.
+
+\emph{Selection bias} is the selected proxy score minus the mean proxy score in the candidate pool. It measures how aggressively the selector chases the upper proxy tail as \(N\) grows. \emph{Mode entropy} is used in the synthetic two-mode obstacle world to test whether selection collapses onto one obstacle-avoidance mode. \emph{Flow residual} is the root mean square candidate difference between coarse and fine Euler integration of the same rectified-flow model. It is a numerical-consistency diagnostic, not the main uncertainty estimate.
+
+\emph{Oracle headroom} is \(R(x_{\mathrm{oracle}},c)-R(x_{\mathrm{proxy}},c)\), where \(x_{\mathrm{oracle}}\) is the best true-return candidate inside the same generated pool. Oracle headroom is not a deployable result. It is included because it separates two failure modes: bad generation, where no good candidate exists, and bad selection, where the generated pool contains better candidates that the proxy ignores.
+
+\section{Per-Task Risk Register}
+
+Table~\ref{tab:risk-register} summarizes how each benchmark should and should not be interpreted. This is intentionally stricter than a usual positive-results table: a paper about audits should make its own weak spots easy to find.
+
+\begin{table}[h]
+\centering
+\caption{Per-task interpretation of the Gymnasium stress benchmark.}
+\label{tab:risk-register}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{L{0.17\linewidth}L{0.28\linewidth}L{0.24\linewidth}L{0.22\linewidth}}
+\toprule
+Task & Strongest evidence & Main risk & Scoped interpretation \\
+\midrule
+CartPole-v1 & Strict proxy harm, strict feature repair, large oracle headroom & Open-loop action plans are simpler than closed-loop control & Clean standard-control proxy-tail failure case \\
+MountainCar-v0 & Positive oracle headroom, lower OOD, lower mean gap & High-energy sustained actions can be useful in some contexts & Stress case; calibration is diagnostic but not a solved repair \\
+Acrobot-v1 & Positive oracle headroom, lower OOD/gap, positive mean repair & Torque-heavy behavior can be both necessary and proxy-attractive & Stress case; headroom shows selection remains imperfect \\
+Synthetic point mass & Strong five-seed repair and step-sweep persistence & Intentionally constructed proxy omission & Mechanism isolation, not broad external validity \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two design choices are worth making explicit. First, the Gymnasium policies are open-loop action sequences rather than closed-loop controllers. This keeps the unit of analysis aligned with rectified-flow trajectory generation and makes candidate-pool selection directly auditable, but it also limits control performance. Second, the proxy is intentionally incomplete. The paper is not claiming that a modern learned value model would fail in the same way without evidence. It claims that once a proxy has a shortcut, upper-tail selection can amplify that shortcut, and the proposed audit can detect whether calibration actually repairs the selected candidate.
+
+\section{Reproducibility Checklist}
+
+The final PDF is considered reproducible only when the following checks pass in order. The repository must install with \texttt{python -m pip install -e .[dev]}. Unit tests must pass with \texttt{pytest}. The synthetic aggregate, step sweep, and Gymnasium benchmark must exist under \texttt{results/}. The paper figures must be regenerated under \texttt{paper/figures/}. \texttt{scripts/run\_claim\_audit.py} must return \texttt{"status": "pass"}. \texttt{scripts/build\_paper.py} must compile a v4 PDF without a LaTeX failure log. Finally, the rendered PDF must show all figures and wide tables without clipping or overlap.
+
+The audit intentionally stores intermediate CSV files, not only summary numbers. This makes it possible to re-run alternative claim gates after review. For example, a reviewer can inspect \texttt{results/gym\_control/\allowbreak metrics.csv} to compare selectors at \(N=8\) or \(N=16\), or inspect \texttt{results/gym\_control/\allowbreak effects.csv} to see which task-seed pairs produce weak calibration effects. The paper's claims use only the frozen \(N=32\) aggregate, but the row-level data are retained to make hidden cherry-picking harder.
 
 \begin{thebibliography}{9}
 
@@ -168,6 +362,11 @@ ICML, 2022.
 D. Hafner, J. Pasukonis, J. Ba, and T. Lillicrap.
 Mastering Diverse Domains through World Models.
 arXiv, 2023.
+
+\bibitem{towers2024gymnasium}
+M. Towers, A. Kwiatkowski, J. Terry, J. U. Balis, G. De Cola, T. Deleu, M. Goul{\~a}o, A. Kallinteris, M. Krimmel, A. KG, R. Perez-Vicente, A. Pierr{\'e}, S. Schulhoff, J. T. Tai, H. Tan, and O. G. Younis.
+Gymnasium: A Standard Interface for Reinforcement Learning Environments.
+arXiv:2407.17032, 2024.
 
 \end{thebibliography}
 

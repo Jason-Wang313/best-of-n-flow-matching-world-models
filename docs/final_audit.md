@@ -1,38 +1,46 @@
 # Final Audit
 
-This audit records the current submission-facing state after the Paper 8 refactor.
+This audit records the v4 submission-facing state after the real-benchmark hardening pass.
 
 ## Prompt Requirements
 
 - Runnable research repo: implemented.
 - Conditional rectified-flow trajectory generator: implemented in `src/flow_tail_audit/model.py`.
 - Synthetic continuous-control trajectory task: implemented in `src/flow_tail_audit/data.py`.
-- Upper-tail candidate selection with learned/proxy scoring: implemented in `src/flow_tail_audit/samplers.py` and `src/flow_tail_audit/diagnostics.py`.
-- Diagnostics for selection bias, diversity collapse, score exploitation, OOD distance, and true-vs-predicted gap: written to `results/smoke/metrics.csv`.
+- Gymnasium classic-control benchmark tier: implemented in `src/flow_tail_audit/gym_control.py` and `experiments/run_gym_control.py`.
+- Upper-tail candidate selection with proxy scoring: implemented in `src/flow_tail_audit/samplers.py`, `src/flow_tail_audit/diagnostics.py`, and `experiments/run_gym_control.py`.
+- Diagnostics for selection bias, diversity collapse, score exploitation, OOD distance, true-vs-predicted gap, Euler-step consistency, and oracle headroom: implemented.
 - Repair baseline: feature-space calibrated tail selection.
-- Multi-seed evidence: `experiments/run_multiseed.py` writes `results/multiseed/summary.csv`, `aggregate.csv`, and `aggregate.json`.
-- Claim gate: `scripts/run_claim_audit.py` checks five-seed evidence before paper claims are accepted.
+- Controls: first sampled candidate, flow-residual-only selector, and oracle-in-pool upper bound.
+- Claim gate: `scripts/run_claim_audit.py` checks synthetic, Euler-step, and Gymnasium evidence before paper claims are accepted.
 - Anonymous paper source: `paper/main.tex`.
-- Final PDF target: `paper/final/best of n flow matching world models-v3.pdf`.
-- Visible Desktop PDF target after commit/push verification: `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v3.pdf`.
+- Final PDF target: `paper/final/best of n flow matching world models-v4.pdf`.
+- Visible Desktop PDF target after commit/push verification: `C:\Users\wangz\Desktop\best of n flow matching world models-v4.pdf`.
 
 ## Verification Log
 
-Completed on 2026-06-13:
+Completed on 2026-06-15:
 
 ```powershell
-pytest -q
-# 7 passed
-
-python experiments/run_synthetic.py --preset smoke --output results/smoke --paper-figures paper/figures
-
-python experiments/run_multiseed.py --preset smoke --seeds 0,1,2,3,4 --output results/multiseed
-
-python experiments/run_step_sweep.py --preset smoke --seeds 50,51,52,53,54 --output results/step_sweep --paper-figures paper/figures
+python experiments/run_gym_control.py --preset full --seeds 70,71,72,73,74 --output results/gym_control --paper-figures paper/figures
+# curve_rows: 2700
+# effect_rows: 15
+# feature_repair_benchmark_count: 1
+# proxy_harm_benchmark_count: 1
+# residual_control_benchmark_count: 3
 
 python scripts/run_claim_audit.py
 # status: pass
 ```
+
+Previously retained v3 evidence remains part of the v4 claim gate:
+
+```powershell
+python experiments/run_multiseed.py --preset smoke --seeds 0,1,2,3,4 --output results/multiseed
+python experiments/run_step_sweep.py --preset smoke --seeds 50,51,52,53,54 --output results/step_sweep --paper-figures paper/figures
+```
+
+## Synthetic Aggregate
 
 Five-seed aggregate at maximum candidate budget:
 
@@ -46,28 +54,38 @@ Five-seed aggregate at maximum candidate budget:
 
 Interpretation: proxy-tail selection increases apparent value while worsening realized return and moving farther from the training trajectory manifold. The calibrated tail improves true return and reduces both gap and OOD distance in the synthetic audit.
 
-Euler-step sweep:
+## Gymnasium Aggregate
 
-- Proxy-tail true return remains below first-candidate selection by -43.87 on average across 4, 8, and 16 Euler steps.
-- Feature-calibrated selection improves true return over proxy-tail selection by 69.98 on average.
-- Flow-residual-only selection reduces fine-vs-coarse step residual on average, but is not promoted as the main repair.
+Held-out seeds: 70, 71, 72, 73, 74.
+
+- CartPole-v1: proxy-first = -5.78 with 95% interval [-8.48, -2.65]; calibrated-proxy = +9.81 [6.98, 12.98]; oracle-proxy = +27.28 [25.56, 28.94].
+- MountainCar-v0: proxy-first = +0.68 [-0.11, 1.64]; calibrated-proxy = +0.31 [-0.64, 1.26]; oracle-proxy = +8.35 [6.62, 10.24].
+- Acrobot-v1: proxy-first = +3.39 [0.18, 5.86]; calibrated-proxy = +0.48 [-0.04, 1.48]; oracle-proxy = +10.91 [8.53, 12.96].
+
+Claim scope:
+
+- Strict proxy-tail harm and strict feature-calibrated repair are claimed only for CartPole-v1.
+- MountainCar-v0 and Acrobot-v1 are stress cases: calibration reduces selected OOD distance and mean proxy-realized gap, but utility repair is weak.
+- Every Gymnasium benchmark has positive oracle headroom above the proxy tail, so better generated candidates exist in the sampled pool.
+- Flow-residual selection reduces selected step residual on all three benchmarks, but it is not promoted as the main repair.
 
 ## Novelty Audit
 
 The paper no longer presents itself as a generic candidate-count or reward-hacking result. Its distinct identity is a rectified-flow trajectory audit:
 
-- continuous paths generated by a learned vector field;
+- continuous paths or action sequences generated by a learned vector field;
 - selection evaluated at the upper proxy tail rather than average sample quality;
 - held-out true-return diagnostics on selected futures;
 - feature-space OOD and mode-entropy diagnostics tied to trajectory validity;
 - Euler-step consistency stress showing the failure is not merely a coarse-integration artifact;
-- a five-seed claim gate that prevents unsupported claims from entering the paper.
+- Gymnasium classic-control stress tests with first-candidate, residual-control, and oracle-in-pool baselines;
+- claim gates that prevent unsupported claims from entering the paper.
 
 ## Known Limitations
 
-- Synthetic point-mass task only.
+- Gymnasium tier uses classic-control tasks, not high-dimensional robotics or pixel control.
+- Action generation is open-loop.
 - Proxy model is intentionally incomplete.
-- Feature-space calibration is hand-built.
-- No standard offline-control benchmark yet.
+- Feature-space calibration is hand-built and task-scaled.
 - No diffusion-trajectory baseline yet.
-- No high-dimensional robotics, video, or pixel-control evidence.
+- No offline-control SOTA comparison yet.

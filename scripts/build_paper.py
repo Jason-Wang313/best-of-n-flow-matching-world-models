@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PAPER = ROOT / "paper"
-FINAL = PAPER / "final" / "best of n flow matching world models-v3.pdf"
+FINAL = PAPER / "final" / "best of n flow matching world models-v4.pdf"
 FAILURE_LOG = ROOT / "docs" / "latex_failure.txt"
 SCRATCH_EXTENSIONS = [".aux", ".log", ".out", ".toc", ".bbl", ".blg"]
 
