@@ -2,6 +2,18 @@
 
 This audit records the v4 submission-facing state after the real-benchmark hardening pass.
 
+## Final Artifact and Provenance
+
+- Paper: `best of n flow matching world models-v4.pdf`
+- Source folder: `C:\Users\wangz\best of n flow matching world models`
+- GitHub remote: `https://github.com/Jason-Wang313/best-of-n-flow-matching-world-models.git`
+- Repository PDF: `paper/final/best of n flow matching world models-v4.pdf`
+- Visible Desktop PDF: `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v4.pdf`
+- SHA256: `A2AF779CA206BAC22FF30BD923E56725F3D4F1CD61C8157E5F7666932ECBC6DD`
+- Page count: 10
+- Repo/Desktop hash match: yes
+- Verified on: 2026-06-16
+
 ## Prompt Requirements
 
 - Runnable research repo: implemented.
@@ -15,9 +27,30 @@ This audit records the v4 submission-facing state after the real-benchmark harde
 - Claim gate: `scripts/run_claim_audit.py` checks synthetic, Euler-step, and Gymnasium evidence before paper claims are accepted.
 - Anonymous paper source: `paper/main.tex`.
 - Final PDF target: `paper/final/best of n flow matching world models-v4.pdf`.
-- Visible Desktop PDF target after commit/push verification: `C:\Users\wangz\Desktop\best of n flow matching world models-v4.pdf`.
+- Visible Desktop PDF target: `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v4.pdf`.
 
 ## Verification Log
+
+Final v4 artifact verification completed on 2026-06-16:
+
+```powershell
+python -m compileall src experiments scripts tests -q
+python -m pytest -q
+python scripts\run_claim_audit.py
+python scripts\build_paper.py --desktop-copy "C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v4.pdf"
+rg -n "undefined|Citation.*undefined|Reference.*undefined|Rerun to get|Overfull|LaTeX Warning|Package natbib Warning" "paper\main.log"
+pdfinfo "paper\final\best of n flow matching world models-v4.pdf"
+pdftoppm -png "paper\final\best of n flow matching world models-v4.pdf" "tmp\pdfs\flow_v4\page"
+```
+
+Results:
+
+- Compile check: passed.
+- Unit tests: 8 passed.
+- Claim audit: passed with no failures.
+- LaTeX log scan: no unresolved citations, unresolved references, rerun warnings, overfull boxes, or natbib warnings.
+- PDF render: all 10 pages rendered.
+- Visual QA: pages 1, 4, 5, 8, and 10 inspected for title/abstract, result tables, Gymnasium figures, appendix checklist, artifact map, references, clipping, and readability.
 
 Completed on 2026-06-15:
 

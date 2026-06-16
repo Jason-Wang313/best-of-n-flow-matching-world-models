@@ -16,14 +16,13 @@ python experiments/run_multiseed.py --preset smoke --seeds 0,1,2,3,4 --output re
 python experiments/run_step_sweep.py --preset smoke --seeds 50,51,52,53,54 --output results/step_sweep
 python experiments/run_gym_control.py --preset full --seeds 70,71,72,73,74 --output results/gym_control
 python scripts/run_claim_audit.py
-python scripts/build_paper.py
+python scripts/build_paper.py --desktop-copy "C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v4.pdf"
 ```
 
 The paper build writes:
 
 - `paper/final/best of n flow matching world models-v4.pdf`
-
-Desktop publishing is intentionally separate and should happen only after the source is committed, pushed, and remote-verified.
+- optional visible Desktop copy when `--desktop-copy` is supplied.
 
 ## Repository Layout
 
