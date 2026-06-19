@@ -9,10 +9,10 @@ This audit records the v4 submission-facing state after the real-benchmark harde
 - GitHub remote: `https://github.com/Jason-Wang313/best-of-n-flow-matching-world-models.git`
 - Repository PDF: `paper/final/best of n flow matching world models-v4.pdf`
 - Visible Desktop PDF: `C:\Users\wangz\OneDrive\Desktop\best of n flow matching world models-v4.pdf`
-- SHA256: `A2AF779CA206BAC22FF30BD923E56725F3D4F1CD61C8157E5F7666932ECBC6DD`
+- SHA256: `6956A2D07A3C558D484DACDAC5A569247CAEE88A10B7827E9EB0914C8ECC2DD6`
 - Page count: 10
 - Repo/Desktop hash match: yes
-- Verified on: 2026-06-16
+- Verified on: 2026-06-19
 
 ## Prompt Requirements
 
